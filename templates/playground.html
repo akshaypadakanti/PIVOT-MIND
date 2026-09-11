@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Tool Playground</h1>
+    <p>Execute one tool directly, without the language model. Useful for verifying arguments and results.</p>
+</section>
+
+<section class="card">
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label for="{{ form.tool.id_for_label }}">Tool</label>
+            {{ form.tool }}
+        </p>
+        <p>
+            <label for="{{ form.input_data.id_for_label }}">Input</label>
+            {{ form.input_data }}
+        </p>
+        <p class="muted">Plain text is mapped to the tool’s primary argument. You can also paste a JSON object of named arguments, for example <code>{"value": 10, "from_unit": "km", "to_unit": "miles"}</code>.</p>
+        <div class="form-actions">
+            <button type="submit">Execute Tool</button>
+            <a class="button secondary" href="{% url 'agent_playground' %}">Open Agent Playground</a>
+        </div>
+    </form>
+</section>
+
+{% if selected_tool %}
+<section class="card">
+    <h2>Input → Tool → Result</h2>
+    <div class="flow">
+        <div class="flow-node">Input</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node accent">{{ selected_tool.name }}</div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node">Result</div>
+    </div>
+    <dl class="kv">
+        <dt>Arguments</dt>
+        <dd><code>{{ parsed_args }}</code></dd>
+        <dt>Status</dt>
+        <dd>
+            {% if result.success %}
+                <span class="badge success">Success</span>
+            {% else %}
+                <span class="badge failed">Failed</span>
+            {% endif %}
+        </dd>
+        <dt>Time</dt>
+        <dd>{{ elapsed }}s</dd>
+        <dt>Summary</dt>
+        <dd>{{ result.summary }}</dd>
+    </dl>
+    {% if result_pretty %}
+        <h3>Result data</h3>
+        <pre>{{ result_pretty }}</pre>
+    {% endif %}
+    {% if result.error %}
+        <p>{{ result.error }}</p>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

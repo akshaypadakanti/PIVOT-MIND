@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Tools</h1>
+    <p>Every registered capability the agent can choose. Local tools work offline. External APIs require keys.</p>
+</section>
+
+<div class="tools-grid">
+    {% for tool in tools %}
+        <article class="tool-card">
+            <div class="card-top">
+                <div class="tool-icon">{% if tool.is_local %}∑{% elif tool.name == "weather" %}☁{% elif tool.name == "web_search" %}⌕{% else %}⚙{% endif %}</div>
+            </div>
+            <h2>{{ tool.name }}</h2>
+            <div class="card-copy">
+                <p>{{ tool.description }}</p>
+                <p>
+                    <span class="badge {% if tool.status_label == 'Ready' or tool.status_label == 'Configured' %}ready{% elif tool.status_label == 'Demo Mode' %}demo{% else %}not-configured{% endif %}">{{ tool.status_label }}</span>
+                    <span class="badge local">{{ tool.type_label }}</span>
+                    <span class="badge info">{{ tool.category }}</span>
+                </p>
+                <p class="muted">Example queries</p>
+                <ul class="help-list">
+                    {% for example in tool.examples %}
+                        <li>{{ example }}</li>
+                    {% empty %}
+                        <li>No examples listed.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="card-actions">
+                <a class="button ghost" href="{% url 'playground' %}?tool={{ tool.name }}">Open in Playground</a>
+            </div>
+        </article>
+    {% endfor %}
+</div>
+{% endblock %}

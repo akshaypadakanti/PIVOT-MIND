@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-header" style="margin-bottom: 2rem;">
+    <div class="hero-badge">🚀 LAUNCH NEW PIPELINE</div>
+    <h1 class="hero-title">Configure & Analyze Tabular Dataset</h1>
+    <p class="hero-subtitle">Upload custom CSV/Excel files or launch built-in benchmark datasets to execute the autonomous 5-agent pipeline.</p>
+</div>
+
+<div class="grid-2">
+    <div class="card glassmorphic">
+        <h2>Dataset Input Configuration</h2>
+        <form method="post" enctype="multipart/form-data" class="stack js-agent-form" id="upload-form">
+            {% csrf_token %}
+            
+            <div class="field">
+                <label style="font-weight: 600; display: block; margin-bottom: 0.4rem;">Option A: Upload Local File</label>
+                <div class="dropzone" id="upload-dropzone">
+                    {{ form.dataset_file }}
+                    <div class="dropzone-content">
+                        <div class="dropzone-icon">📁</div>
+                        <div class="dropzone-text">
+                            <strong>Choose a CSV or Excel file</strong>
+                            <span>Drag file here or click to browse (.csv, .xlsx, .xls)</span>
+                        </div>
+                        <div class="dropzone-file-name" id="upload-file-display" hidden></div>
+                    </div>
+                </div>
+                {% if form.dataset_file.errors %}
+                    <div style="color: var(--danger); font-size: 0.85rem; margin-top: 0.3rem;">{{ form.dataset_file.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div style="text-align: center; color: var(--muted); font-size: 0.85rem; margin: 0.75rem 0; font-weight: 600;">— OR —</div>
+
+            <div class="field">
+                <label style="font-weight: 600; display: block; margin-bottom: 0.4rem;">Option B: Benchmark Demo Dataset</label>
+                {{ form.demo_dataset }}
+                {% if form.demo_dataset.errors %}
+                    <div style="color: var(--danger); font-size: 0.85rem; margin-top: 0.3rem;">{{ form.demo_dataset.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--line); margin: 1.25rem 0;">
+
+            <div class="field">
+                <label style="font-weight: 600; display: block; margin-bottom: 0.4rem;">
+                    Focus Business Question (Optional)
+                    <span class="badge info" style="margin-left: 0.5rem;">Autopilot Mode Active if Blank</span>
+                </label>
+                {{ form.user_query }}
+                <p class="hint" style="margin-top: 0.4rem; font-size: 0.825rem; color: var(--muted); line-height: 1.4;">
+                    Leave empty to trigger <strong>Autopilot Mode</strong>. Agent 3 will evaluate schema metadata, generate 3 to 5 ranked business questions, and auto-trigger Plotly AST sandbox chart rendering & executive report synthesis.
+                </p>
+                {% if form.user_query.errors %}
+                    <div style="color: var(--danger); font-size: 0.85rem; margin-top: 0.3rem;">{{ form.user_query.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions" style="margin-top: 1.5rem;">
+                <button type="submit" class="button cta-submit-btn" style="width: 100%; text-align: center; justify-content: center; font-size: 1rem; padding: 0.85rem;">
+                    ⚡ Launch 5-Agent PivotMind Pipeline
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>5-Agent Pipeline Sequence</h2>
+        <div class="timeline" style="margin-top: 1rem;">
+            <div class="timeline-card">
+                <strong style="color: var(--accent);">Agent 1 · Data Doctor Hygiene</strong>
+                <p class="muted" style="font-size: 0.88rem; margin: 0.3rem 0 0;">Evaluates missing values, mixed types, duplicates, and outliers. Calculates deterministic Data Health Score (0-100).</p>
+            </div>
+            <div class="timeline-card">
+                <strong style="color: #6366f1;">Agent 2 · Schema Profiler Engine</strong>
+                <p class="muted" style="font-size: 0.88rem; margin: 0.3rem 0 0;">Generates high-density, low-token schema & statistical summary representation for LLM context injection.</p>
+            </div>
+            <div class="timeline-card">
+                <strong style="color: #ec4899;">Agent 3 · Hypothesis Engine (Autopilot)</strong>
+                <p class="muted" style="font-size: 0.88rem; margin: 0.3rem 0 0;">Formulates 3–5 ranked business hypotheses (trends, anomalies, cohorts). Auto-triggers execution on top hypothesis.</p>
+            </div>
+            <div class="timeline-card">
+                <strong style="color: var(--success);">Agent 4 · Plotly AST Visualizer</strong>
+                <p class="muted" style="font-size: 0.88rem; margin: 0.3rem 0 0;">Generates Plotly chart code, verifies safety via Python AST sandbox, and runs self-healing error recovery loop on failures.</p>
+            </div>
+            <div class="timeline-card">
+                <strong style="color: #f59e0b;">Agent 5 · Executive Strategist</strong>
+                <p class="muted" style="font-size: 0.88rem; margin: 0.3rem 0 0;">Synthesizes plain-language executive summary, health takeaways, strategic findings, and expected business impact.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dropzone = document.getElementById("upload-dropzone");
+        const fileInput = dropzone ? dropzone.querySelector("input[type=file]") : null;
+        const fileDisplay = document.getElementById("upload-file-display");
+
+        if (dropzone && fileInput) {
+            dropzone.addEventListener("click", () => fileInput.click());
+
+            dropzone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropzone.classList.add("dragover");
+            });
+
+            ["dragleave", "dragend"].forEach(type => {
+                dropzone.addEventListener(type, () => dropzone.classList.remove("dragover"));
+            });
+
+            dropzone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropzone.classList.remove("dragover");
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFileDisplay();
+                }
+            });
+
+            fileInput.addEventListener("change", updateFileDisplay);
+        }
+
+        function updateFileDisplay() {
+            if (fileInput && fileInput.files.length > 0) {
+                fileDisplay.textContent = "Selected: " + fileInput.files[0].name;
+                fileDisplay.hidden = false;
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Agent Playground</h1>
+    <p>Enter to run · Shift+Enter for a new line. Watch the full tool-selection loop.</p>
+</section>
+
+{% include "_execution.html" %}
+
+<section class="card">
+    <form method="post" class="js-agent-form" action="{% url 'agent_playground' %}#agent-response">
+        {% csrf_token %}
+        {{ form.query }}
+        <p class="hint">Enter sends the question. Shift+Enter adds a line.</p>
+        <div class="form-actions">
+            <button type="submit">Run Agent</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

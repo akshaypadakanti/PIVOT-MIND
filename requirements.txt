@@ -1,0 +1,9 @@
+Django>=5.0,<5.3
+google-genai>=1.0.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.18.0
+openpyxl>=3.1.0
+gunicorn>=21.2.0
+whitenoise>=6.6.0

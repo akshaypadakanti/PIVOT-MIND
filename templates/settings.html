@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Display &amp; Interface Settings</h1>
+    <p>Customize workspace theme, typography, layout density, and view options.</p>
+</section>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-top:0; font-size: 1.15rem;">🎨 Appearance Theme</h2>
+    <p class="muted" style="font-size: 0.875rem; margin-top: 0.25rem;">Choose your preferred color theme across the PivotMind workspace.</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <label class="theme-option-card" style="border: 2px solid var(--line); border-radius: 12px; padding: 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s;">
+            <input type="radio" name="pivotmind_theme_input" value="light" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="display: block;">☀️ Light Mode</strong>
+                <span class="muted" style="font-size: 0.8rem;">Classic clean 2D flat interface</span>
+            </div>
+        </label>
+        <label class="theme-option-card" style="border: 2px solid var(--line); border-radius: 12px; padding: 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s;">
+            <input type="radio" name="pivotmind_theme_input" value="dark" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="display: block;">🌙 Dark Mode</strong>
+                <span class="muted" style="font-size: 0.8rem;">Sleek low-light slate theme</span>
+            </div>
+        </label>
+        <label class="theme-option-card" style="border: 2px solid var(--line); border-radius: 12px; padding: 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; transition: all 0.2s;">
+            <input type="radio" name="pivotmind_theme_input" value="auto" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="display: block;">⚙️ System Auto</strong>
+                <span class="muted" style="font-size: 0.8rem;">Match operating system theme</span>
+            </div>
+        </label>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-top:0; font-size: 1.15rem;">🔤 Font Size &amp; Typography</h2>
+    <p class="muted" style="font-size: 0.875rem; margin-top: 0.25rem;">Adjust text scaling for readability and table scannability.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <label style="border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="radio" name="pivotmind_font_input" value="small" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="font-size: 0.9rem;">Small (13.5px)</strong>
+                <span class="muted" style="display:block; font-size: 0.78rem;">Compact data density</span>
+            </div>
+        </label>
+        <label style="border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="radio" name="pivotmind_font_input" value="medium" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="font-size: 0.95rem;">Medium (15px)</strong>
+                <span class="muted" style="display:block; font-size: 0.78rem;">Default balanced size</span>
+            </div>
+        </label>
+        <label style="border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="radio" name="pivotmind_font_input" value="large" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="font-size: 1.05rem;">Large (16.5px)</strong>
+                <span class="muted" style="display:block; font-size: 0.78rem;">Enhanced readability</span>
+            </div>
+        </label>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-top:0; font-size: 1.15rem;">📐 Layout Density</h2>
+    <p class="muted" style="font-size: 0.875rem; margin-top: 0.25rem;">Control table row height and card margins.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <label style="border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="radio" name="pivotmind_density_input" value="comfortable" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="display:block;">Comfortable</strong>
+                <span class="muted" style="font-size: 0.78rem;">Spacious padding &amp; cards</span>
+            </div>
+        </label>
+        <label style="border: 1px solid var(--line); border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="radio" name="pivotmind_density_input" value="compact" style="width: 1.1rem; height: 1.1rem;">
+            <div>
+                <strong style="display:block;">Compact</strong>
+                <span class="muted" style="font-size: 0.78rem;">Tight table rows &amp; card margins</span>
+            </div>
+        </label>
+    </div>
+</div>
+
+<div style="display: flex; gap: 1rem; margin-top: 1.5rem; align-items: center;">
+    <button type="button" id="save-settings-btn" class="button cta-submit-btn" style="padding: 0.6rem 1.5rem;">💾 Save Preferences</button>
+    <button type="button" id="reset-settings-btn" class="button secondary" style="padding: 0.6rem 1.25rem;">↺ Reset Defaults</button>
+    <span id="settings-status-msg" style="color: var(--success); font-weight: 600; font-size: 0.9rem;" hidden>✓ Saved!</span>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const themeRadios = document.querySelectorAll('input[name="pivotmind_theme_input"]');
+    const fontRadios = document.querySelectorAll('input[name="pivotmind_font_input"]');
+    const densityRadios = document.querySelectorAll('input[name="pivotmind_density_input"]');
+    const saveBtn = document.getElementById("save-settings-btn");
+    const resetBtn = document.getElementById("reset-settings-btn");
+    const statusMsg = document.getElementById("settings-status-msg");
+
+    // Load saved preferences into inputs
+    let currentTheme = localStorage.getItem("pivotmind_theme") || "light";
+    let currentFont = localStorage.getItem("pivotmind_font_size") || "medium";
+    let currentDensity = localStorage.getItem("pivotmind_density") || "comfortable";
+
+    themeRadios.forEach(r => { if(r.value === currentTheme) r.checked = true; });
+    fontRadios.forEach(r => { if(r.value === currentFont) r.checked = true; });
+    densityRadios.forEach(r => { if(r.value === currentDensity) r.checked = true; });
+
+    // Live preview handlers
+    themeRadios.forEach(r => {
+        r.addEventListener("change", function() {
+            let val = this.value;
+            let actualTheme = val;
+            if (val === "auto") {
+                actualTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            document.documentElement.setAttribute("data-theme", actualTheme);
+            localStorage.setItem("pivotmind_theme", val);
+            showStatus("Theme updated");
+        });
+    });
+
+    fontRadios.forEach(r => {
+        r.addEventListener("change", function() {
+            document.documentElement.setAttribute("data-font-size", this.value);
+            localStorage.setItem("pivotmind_font_size", this.value);
+            showStatus("Font size updated");
+        });
+    });
+
+    densityRadios.forEach(r => {
+        r.addEventListener("change", function() {
+            document.documentElement.setAttribute("data-density", this.value);
+            localStorage.setItem("pivotmind_density", this.value);
+            showStatus("Layout density updated");
+        });
+    });
+
+    if (saveBtn) {
+        saveBtn.addEventListener("click", function() {
+            showStatus("✓ All settings saved successfully!");
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener("click", function() {
+            localStorage.setItem("pivotmind_theme", "light");
+            localStorage.setItem("pivotmind_font_size", "medium");
+            localStorage.setItem("pivotmind_density", "comfortable");
+
+            document.documentElement.setAttribute("data-theme", "light");
+            document.documentElement.setAttribute("data-font-size", "medium");
+            document.documentElement.setAttribute("data-density", "comfortable");
+
+            themeRadios.forEach(r => { r.checked = (r.value === "light"); });
+            fontRadios.forEach(r => { r.checked = (r.value === "medium"); });
+            densityRadios.forEach(r => { r.checked = (r.value === "comfortable"); });
+
+            showStatus("Reset to default settings");
+        });
+    }
+
+    function showStatus(text) {
+        if (!statusMsg) return;
+        statusMsg.textContent = text;
+        statusMsg.hidden = false;
+        setTimeout(() => { statusMsg.hidden = true; }, 2500);
+    }
+});
+</script>
+{% endblock %}

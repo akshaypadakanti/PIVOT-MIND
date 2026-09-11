@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Add a Tool</h1>
+    <p>A seven-step guide for extending AgentLab. All execution stays on the Django server.</p>
+</section>
+
+<section class="card">
+    <h2>1. Create a Python function</h2>
+    <p>Add a module under <code>agent/tools/</code>. Return a dictionary with <code>success</code>, <code>summary</code>, <code>error</code>, and <code>data</code>.</p>
+<pre>def execute(city: str) -> dict:
+    return {
+        "success": True,
+        "error": None,
+        "summary": f"Looked up {city}",
+        "data": {"city": city},
+    }</pre>
+</section>
+
+<section class="card">
+    <h2>2. Define parameters</h2>
+    <p>Keep arguments explicit and validated. Reject empty values and unexpected types before calling any API.</p>
+</section>
+
+<section class="card">
+    <h2>3. Create a Gemini function schema</h2>
+<pre>{
+  "name": "weather",
+  "description": "Get current weather for a city.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "city": {"type": "string"}
+    },
+    "required": ["city"]
+  }
+}</pre>
+</section>
+
+<section class="card">
+    <h2>4. Register the tool</h2>
+    <p>Export <code>NAME</code>, <code>DESCRIPTION</code>, <code>CATEGORY</code>, <code>SCHEMA</code>, and <code>execute</code>, then add the module to <code>_TOOL_MODULES</code> in <code>agent/services/tool_registry.py</code>.</p>
+</section>
+
+<section class="card">
+    <h2>5. Add execution logic</h2>
+    <p>The agent loop never uses a giant if/elif router. It looks up the tool by name and calls <code>execute_tool()</code>. Timeouts, missing keys, and invalid input should return friendly errors — never stack traces.</p>
+</section>
+
+<section class="card">
+    <h2>6. Test the tool</h2>
+    <p>Use the Tool Playground for direct execution. Add unit tests in <code>agent/tests/</code>. Mock external HTTP so tests do not need live keys.</p>
+</section>
+
+<section class="card">
+    <h2>7. Add a challenge</h2>
+    <p>Teach the new tool by adding a record in <code>seed_challenges</code> with <code>expected_tools</code> set to the new tool name. Run <code>python manage.py seed_challenges</code>.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,13 @@
+CustomerID,Tenure_Months,Monthly_Charges,Total_Charges,Contract_Type,Support_Tickets,Churn
+CUST-101,12,65.50,786.00,Month-to-Month,4,Yes
+CUST-102,48,105.00,5040.00,Two-Year,1,No
+CUST-103,3,45.20,135.60,Month-to-Month,6,Yes
+CUST-104,24,89.90,2157.60,One-Year,2,No
+CUST-105,6,75.00,450.00,Month-to-Month,5,Yes
+CUST-106,60,115.50,6930.00,Two-Year,0,No
+CUST-107,18,55.00,990.00,One-Year,3,No
+CUST-108,1,70.10,70.10,Month-to-Month,8,Yes
+CUST-109,36,95.00,3420.00,Two-Year,1,No
+CUST-110,9,82.40,741.60,Month-to-Month,4,Yes
+CUST-111,54,110.00,5940.00,Two-Year,0,No
+CUST-112,15,60.80,912.00,One-Year,2,No

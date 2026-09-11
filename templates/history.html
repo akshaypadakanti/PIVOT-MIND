@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load agent_extras %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>History</h1>
+    <p>Browse previous queries, final answers, and the tools that produced them.</p>
+</section>
+
+<section class="card">
+    <div class="history-grid">
+        {% for item in page %}
+            <article class="history-card">
+                <p class="muted">{{ item.created_at }} · <span class="badge {{ item.status }}">{{ item.get_status_display }}</span></p>
+                <h2>{{ item.user_query }}</h2>
+                <div class="card-copy">
+                    <p>{{ item.final_response|plain_preview:220 }}</p>
+                    <p class="muted">Tools: {{ item.tools_used|join:", "|default:"None" }}</p>
+                </div>
+                <div class="card-actions">
+                    {% if item.pivotmind_pk %}
+                        <a class="button primary" href="{% url 'pivotmind_detail' item.pivotmind_pk %}">Open Workspace →</a>
+                    {% else %}
+                        <a class="button ghost" href="{% url 'activity_detail' item.pk %}">Open full timeline</a>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <p class="muted">History is empty. Run an analysis from the dashboard to create the first record.</p>
+        {% endfor %}
+    </div>
+    {% if page.paginator.count %}
+        {% include "_pagination.html" %}
+    {% endif %}
+</section>
+{% endblock %}

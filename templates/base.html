@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if page_title %}{{ page_title }} · {% endif %}PivotMind Analytics Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=minimal_orange_v1">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        (function() {
+            var t = localStorage.getItem("pivotmind_theme") || "light";
+            var f = localStorage.getItem("pivotmind_font_size") || "medium";
+            var d = localStorage.getItem("pivotmind_density") || "comfortable";
+            if (t === "auto") {
+                t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            document.documentElement.setAttribute("data-theme", t);
+            document.documentElement.setAttribute("data-font-size", f);
+            document.documentElement.setAttribute("data-density", d);
+        })();
+    </script>
+</head>
+<body class="pivotmind-app flat-layout">
+    <div class="app-layout">
+        <!-- Royal Blue Vertical Sidebar (Matching Flat Design Reference Image) -->
+        <aside class="app-sidebar">
+            <a class="sidebar-brand" href="{% url 'pivotmind_dashboard' %}">
+                <div class="sidebar-logo-icon">⚡</div>
+                <span class="sidebar-brand-name">PivotMind</span>
+            </a>
+            <nav class="sidebar-nav">
+                <a href="{% url 'pivotmind_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'pivotmind_dashboard' %}active{% endif %}" title="Dashboard">
+                    <span class="icon">🏠</span>
+                    <span class="link-text">Dashboard</span>
+                </a>
+                <a href="{% url 'pivotmind_upload' %}" class="sidebar-link {% if request.resolver_match.url_name == 'pivotmind_upload' %}active{% endif %}" title="New Pipeline">
+                    <span class="icon">📊</span>
+                    <span class="link-text">New Analysis</span>
+                </a>
+                <a href="{% url 'activity' %}" class="sidebar-link {% if request.resolver_match.url_name == 'activity' %}active{% endif %}" title="Activity">
+                    <span class="icon">⏱️</span>
+                    <span class="link-text">Activity</span>
+                </a>
+                <a href="{% url 'history' %}" class="sidebar-link {% if request.resolver_match.url_name == 'history' %}active{% endif %}" title="History">
+                    <span class="icon">📋</span>
+                    <span class="link-text">History</span>
+                </a>
+                <a href="{% url 'settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" title="Settings">
+                    <span class="icon">⚙️</span>
+                    <span class="link-text">Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="sidebar-badge">5-AGENT AI</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="app-main">
+            <header class="app-topbar">
+                <div class="topbar-inner">
+                    <div class="topbar-title">
+                        <h2>{{ page_title|default:"PivotMind Analytics Workspace" }}</h2>
+                    </div>
+                    <div class="topbar-actions">
+                        <a href="{% url 'pivotmind_upload' %}" class="topbar-cta-btn">+ Launch Pipeline</a>
+                    </div>
+                </div>
+            </header>
+
+            <main class="container">
+                {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                            <div class="flash {{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="site-footer">
+                <div class="footer-inner">
+                    <div><strong>PivotMind</strong> · Autonomous 5-Agent Tabular Data Analytics System</div>
+                    <div class="footer-links">
+                        <span>Gemini 3.6 Engine</span>
+                        <span>AST Plotly Sandbox</span>
+                        <a href="{% url 'pivotmind_upload' %}">New Analysis</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <div id="agent-working" class="working-overlay" style="display: none;" hidden>
+        <div class="working-panel" style="position: relative;">
+            <button type="button" class="working-close-btn" onclick="hideWorkingOverlay()" style="position: absolute; top: 12px; right: 16px; background: transparent; border: 0; font-size: 1.2rem; cursor: pointer; color: var(--muted);" title="Close">✕</button>
+            <p class="working-kicker">PivotMind 5-Agent Pipeline</p>
+            <h2>Agents are Analyzing Dataset...</h2>
+            <p>Running Data Doctor hygiene check, Profiler statistics, Autopilot business hypotheses, AST Plotly sandbox, and Executive synthesis.</p>
+            <div class="working-bar" aria-hidden="true"><span></span></div>
+            <ol class="working-steps">
+                <li>Agent 1: Pandas Data Hygiene & Health Scoring</li>
+                <li>Agent 2: Low-Token Schema & Statistical Summary</li>
+                <li>Agent 3: Gemini Autopilot Business Hypotheses</li>
+                <li>Agent 4: Plotly Visualization AST Sandbox Execution</li>
+                <li>Agent 5: Executive Synthesis & Strategic Report</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function hideWorkingOverlay() {
+            var el = document.getElementById("agent-working");
+            if (el) {
+                el.hidden = true;
+                el.style.display = "none";
+            }
+        }
+        window.addEventListener("pageshow", hideWorkingOverlay);
+        document.addEventListener("DOMContentLoaded", hideWorkingOverlay);
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") hideWorkingOverlay();
+        });
+    </script>
+    <script src="{% static 'js/agentlab.js' %}?v=flat2d_v10"></script>
+</body>
+</html>

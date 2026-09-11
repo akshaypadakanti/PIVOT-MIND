@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Activity</h1>
+    <p>Every agent run is stored with tools used, status, and timing.</p>
+</section>
+
+<section class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Status</th>
+                    <th>Tools used</th>
+                    <th>Tool count</th>
+                    <th>Time</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in page %}
+                    <tr>
+                        <td>
+                            {% if item.pivotmind_pk %}
+                                <a href="{% url 'pivotmind_detail' item.pivotmind_pk %}" style="font-weight: 600;">⚡ {{ item.user_query|truncatechars:80 }}</a>
+                            {% else %}
+                                <a href="{% url 'activity_detail' item.pk %}">{{ item.user_query|truncatechars:80 }}</a>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge {{ item.status }}">{{ item.get_status_display }}</span></td>
+                        <td>{{ item.tools_used|join:", "|default:"—" }}</td>
+                        <td>{{ item.tool_call_count }}</td>
+                        <td>{{ item.execution_time }}s</td>
+                        <td>{{ item.created_at|date:"M d, H:i" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="muted">No activity yet. Run an analysis from the dashboard to populate activity records.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page.paginator.count %}
+        {% include "_pagination.html" %}
+    {% endif %}
+</section>
+{% endblock %}

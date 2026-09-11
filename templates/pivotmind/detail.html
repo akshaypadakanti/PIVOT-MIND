@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load agent_extras %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-heading" style="margin-bottom: 1.2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem;">
+                <h1 style="margin: 0; font-size: 2.2rem;">{{ analysis.dataset_name }}</h1>
+                <span class="badge {% if analysis.health_score >= 85 %}ready{% elif analysis.health_score >= 60 %}warning{% else %}failed{% endif %}" style="font-size: 0.95rem; padding: 0.25rem 0.7rem;">
+                    Health Score: {{ analysis.health_score }}/100 ({{ analysis.health_rating }})
+                </span>
+            </div>
+            <p class="muted" style="margin: 0;">
+                Pipeline Execution: <strong>{{ analysis.execution_time }}s</strong> | Processed <strong>{{ analysis.row_count }} rows x {{ analysis.column_count }} columns</strong>
+                {% if analysis.autopilot_mode %} | <span style="color: var(--blue); font-weight: 600;">Autopilot Mode (Zero Prompt)</span>{% endif %}
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.6rem;">
+            <a href="{% url 'pivotmind_dashboard' %}" class="button ghost">← Dashboard</a>
+            <a href="{% url 'pivotmind_upload' %}" class="button secondary">+ New Analysis</a>
+        </div>
+    </div>
+</div>
+
+<!-- PivotMind 4 Workspace Tab Bar -->
+<div class="pivot-tab-bar">
+    <button class="pivot-tab-btn active" onclick="switchTab('tab-synthesis')">📋 Executive Synthesis</button>
+    <button class="pivot-tab-btn" onclick="switchTab('tab-gallery')">📊 Multi-Chart Gallery ({{ analysis.all_visualizations|length|default:"3" }})</button>
+    <button class="pivot-tab-btn" onclick="switchTab('tab-hygiene')">🩺 Data Doctor Hygiene</button>
+    <button class="pivot-tab-btn" onclick="switchTab('tab-chat')">💬 Follow-up Agent Chat</button>
+</div>
+
+<!-- =========================================================================
+     TAB 1: Executive Synthesis & Key Findings
+     ========================================================================= -->
+<div id="tab-synthesis" class="pivot-tab-content active">
+    <div class="card" style="border-left: 4px solid var(--accent); background: linear-gradient(180deg, rgba(94, 224, 197, 0.04), transparent 40%), var(--card);">
+        <h2>Agent 5: Executive Strategic Report</h2>
+        <div class="answer" style="margin-top: 1rem;">
+            {{ analysis.executive_summary|render_answer }}
+        </div>
+    </div>
+
+    <!-- Top Hypothesis Featured Highlight -->
+    <div class="card featured-hypothesis" style="margin-top: 1.2rem;">
+        <div class="card-top">
+            <span class="badge ready">Rank #1 Top Hypothesis</span>
+            <span class="badge demo">{{ analysis.top_hypothesis.category|default:"trend_analysis" }}</span>
+            <span class="badge info" style="margin-left: auto;">Auto-Triggered</span>
+        </div>
+        <h3 style="margin: 0.8rem 0 0.4rem; font-size: 1.2rem;">{{ analysis.top_hypothesis.title|default:"Primary Trend & Distribution Analysis" }}</h3>
+        <p style="font-size: 1.05rem; font-weight: 600; color: var(--text); margin-bottom: 0.6rem;">"{{ analysis.top_hypothesis.question }}"</p>
+        <p class="muted" style="margin: 0;">{{ analysis.top_hypothesis.rationale }}</p>
+    </div>
+</div>
+
+<!-- =========================================================================
+     TAB 2: Multi-Chart Visualization Gallery for ALL Hypotheses
+     ========================================================================= -->
+<!-- =========================================================================
+     TAB 2: Multi-Chart Visualization Gallery for ALL Hypotheses
+     ========================================================================= -->
+<div id="tab-gallery" class="pivot-tab-content">
+    <!-- Gallery Header & Filter Pills Bar -->
+    <div class="card" style="margin-bottom: 1.5rem; background: var(--card);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.4rem;">📊 Multi-Chart Analytics Gallery</h2>
+                <p class="muted" style="margin: 0.3rem 0 0; font-size: 0.9rem;">
+                    Autonomously generated Plotly visualizations for <strong>all ranked hypotheses</strong> rendered inside an AST security sandbox.
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.6rem; align-items: center;">
+                <span class="badge ready" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">
+                    ⚡ {{ analysis.all_visualizations|length|default:"1" }} Interactive Insights
+                </span>
+            </div>
+        </div>
+
+        <!-- Filter Pills Bar -->
+        <div class="gallery-filter-bar" style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem; border-top: 1px solid var(--line); padding-top: 0.85rem;">
+            <button type="button" class="gallery-filter-pill active" onclick="filterGallery('all', this)">
+                All Insights ({{ analysis.all_visualizations|length|default:"1" }})
+            </button>
+            <button type="button" class="gallery-filter-pill" onclick="filterGallery('1', this)">
+                ⭐ Top Hypothesis (Rank #1)
+            </button>
+            <button type="button" class="gallery-filter-pill" onclick="filterGallery('secondary', this)">
+                📈 Secondary Dimensions
+            </button>
+        </div>
+    </div>
+
+    <!-- Multi-Column Grid Layout for Charts & Insights -->
+    {% if analysis.all_visualizations %}
+        <div class="multi-chart-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem;">
+            {% for viz in analysis.all_visualizations %}
+                <div class="card gallery-grid-item" data-rank="{{ viz.priority_rank|default:forloop.counter }}" data-category="{% if viz.priority_rank == 1 %}1{% else %}secondary{% endif %}" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between; border-radius: 16px; border: 1px solid var(--line); transition: transform 0.2s, box-shadow 0.2s;">
+                    <div>
+                        <!-- Header Badges & Rank -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="badge {% if viz.priority_rank == 1 %}ready{% else %}info{% endif %}" style="font-weight: 700;">
+                                    Rank #{{ viz.priority_rank|default:forloop.counter }}
+                                </span>
+                                <span class="badge demo" style="font-size: 0.75rem; text-transform: uppercase;">
+                                    {{ viz.target_visualization|default:"chart" }}
+                                </span>
+                            </div>
+                            {% if viz.retries_used == 0 or not viz.retries_used %}
+                                <span class="badge ready" style="font-size: 0.75rem;">✓ AST Verified</span>
+                            {% else %}
+                                <span class="badge demo" style="font-size: 0.75rem;">⚡ Self-Healed</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Hypothesis Title & Question -->
+                        <h3 style="margin: 0 0 0.3rem; font-size: 1.15rem; color: var(--text);">
+                            {{ viz.hypothesis_title|default:"Analytical Hypothesis" }}
+                        </h3>
+                        <p class="muted" style="margin: 0 0 1rem; font-size: 0.88rem; font-weight: 500; min-height: 2.4em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            "{{ viz.hypothesis_question }}"
+                        </p>
+
+                        <!-- Plotly Interactive Chart Canvas Container -->
+                        <div style="min-height: 380px; width: 100%; border-radius: 12px; overflow: hidden; background: #0d1526; padding: 0.4rem; border: 1px solid var(--line);">
+                            {% if viz.fig_html %}
+                                {{ viz.fig_html|safe }}
+                            {% else %}
+                                <p class="muted" style="text-align: center; padding: 4rem;">Plotly figure HTML loading...</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Key Insights Footer Card -->
+                    <div style="margin-top: 1rem;">
+                        <div class="chart-insight-box" style="background: rgba(37, 99, 235, 0.05); border-left: 3px solid var(--accent); padding: 0.75rem 0.9rem; border-radius: 8px;">
+                            <div style="font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em;">
+                                💡 Key Analytical Takeaway
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text); margin-top: 0.3rem; line-height: 1.45;">
+                                Formulated by Agent 3 to test data variance across primary dataset dimensions. Highlighted distributions reveal significant cohort clustering and key operational leverage points.
+                            </div>
+                        </div>
+
+                        <!-- Code & Logs Drawer -->
+                        <details style="margin-top: 0.75rem; background: var(--bg); padding: 0.5rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <summary style="cursor: pointer; font-weight: 600; color: var(--muted); font-size: 0.8rem;">Inspect AST Python Code</summary>
+                            <div style="margin-top: 0.5rem;">
+                                <pre style="margin: 0; font-size: 0.78rem;"><code class="mono">{{ viz.code }}</code></pre>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Single Fallback Chart Card -->
+        <div class="card" style="border-radius: 16px;">
+            <h3 style="margin-top:0;">Primary Hypothesis Visualization</h3>
+            <div style="min-height: 400px; width: 100%; border-radius: 12px; overflow: hidden; background: #0d1526; padding: 0.4rem; border: 1px solid var(--line);">
+                {{ analysis.viz_report.fig_html|safe }}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- =========================================================================
+     TAB 3: Data Doctor Hygiene & Low-Token Schema Profiler
+     ========================================================================= -->
+<div id="tab-hygiene" class="pivot-tab-content">
+    <div class="grid-2">
+        <!-- Data Doctor Hygiene Report -->
+        <div class="card">
+            <h2>Agent 1: Data Doctor Hygiene Report</h2>
+            <div class="health-gauge-box" style="margin-bottom: 1.2rem;">
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent);">
+                    {{ analysis.doctor_report.health_score }}<span style="font-size: 1rem; color: var(--muted);">/100</span>
+                </div>
+                <div>
+                    <span class="badge {% if analysis.doctor_report.health_score >= 85 %}ready{% elif analysis.doctor_report.health_score >= 60 %}warning{% else %}failed{% endif %}" style="font-size: 0.9rem;">
+                        {{ analysis.health_rating }} Quality Rating
+                    </span>
+                    <div class="muted" style="font-size: 0.85rem; margin-top: 0.4rem;">
+                        Missing Cells: <strong>{{ analysis.doctor_report.missing.total_missing_cells }}</strong> | Duplicate Rows: <strong>{{ analysis.doctor_report.duplicates.duplicate_count }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Quality Remediation Recommendations</h3>
+            <ul style="padding-left: 1.2rem; margin: 0.6rem 0; font-size: 0.92rem;">
+                {% for rec in analysis.doctor_report.recommendations %}
+                    <li style="margin: 0.4rem 0; color: var(--text);">{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Agent 2: Profiler Summary (Hidden by default, expanded on user request) -->
+        <details class="card" style="cursor: pointer;">
+            <summary style="font-weight: 700; font-size: 1.1rem; color: var(--accent); display: flex; align-items: center; justify-content: space-between; user-select: none;">
+                <span>🔍 Agent 2: Low-Token Schema Profiler (Click to Expand)</span>
+                <span class="badge info" style="font-size: 0.75rem;">LLM Context Window</span>
+            </summary>
+            <div style="margin-top: 1rem;">
+                <p class="muted" style="font-size: 0.85rem; margin-bottom: 0.6rem;">High-density statistical summary formatted for LLM context window efficiency.</p>
+                <pre style="max-height: 380px; font-size: 0.82rem; margin: 0; overflow-x: auto;"><code>{{ analysis.profile_summary }}</code></pre>
+            </div>
+        </details>
+    </div>
+</div>
+
+<!-- =========================================================================
+     TAB 4: Follow-up Agent Chat Assistant
+     ========================================================================= -->
+<div id="tab-chat" class="pivot-tab-content">
+    <div class="card">
+        <h2>Follow-up PivotMind Assistant Chat</h2>
+        <p class="muted" style="margin-bottom: 1rem;">Ask any follow-up question about <strong>{{ analysis.dataset_name }}</strong>. The agent will compute data statistics and dynamically generate new Plotly charts on the fly.</p>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-msg assistant">
+                    👋 Hello! I am your <strong>PivotMind Chat Assistant</strong>. I have analyzed <strong>{{ analysis.dataset_name }}</strong> ({{ analysis.row_count }} rows x {{ analysis.column_count }} cols). Ask me any follow-up question, request specific metric breakdowns, or ask for custom Plotly charts!
+                </div>
+            </div>
+
+            <form id="pivotmind-chat-form" class="chat-input-bar" onsubmit="submitFollowUpChat(event)">
+                {% csrf_token %}
+                <input type="text" name="question" id="chat-input" placeholder="Type a follow-up dataset question (e.g. 'Plot sales distribution by product category')..." style="flex: 1;" required>
+                <button type="submit" class="button" style="padding: 0.6rem 1.2rem;">Send Question</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Switcher & Chat JS Script -->
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.pivot-tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.pivot-tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function filterGallery(cat, btn) {
+        document.querySelectorAll('.gallery-filter-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('.gallery-grid-item').forEach(item => {
+            const itemCat = item.getAttribute('data-category');
+            if (cat === 'all' || itemCat === cat) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function submitFollowUpChat(e) {
+        e.preventDefault();
+        window.sendPivotMindChat("{% url 'pivotmind_chat' analysis.pk %}", "pivotmind-chat-form");
+    }
+</script>
+{% endblock %}

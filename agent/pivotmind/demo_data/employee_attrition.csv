@@ -1,0 +1,11 @@
+EmployeeNumber,Age,BusinessTravel,Department,DistanceFromHome,EnvironmentSatisfaction,Gender,JobInvolvement,JobLevel,JobRole,JobSatisfaction,MaritalStatus,MonthlyIncome,NumCompaniesWorked,OverTime,PercentSalaryHike,PerformanceRating,RelationshipSatisfaction,StandardHours,TotalWorkingYears,TrainingTimesLastYear,WorkLifeBalance,YearsAtCompany,YearsInCurrentRole,YearsSinceLastPromotion,YearsWithCurrManager,Attrition
+1,41,Travel_Rarely,Sales,1,2,Female,3,2,Sales Executive,4,Single,5993,8,Yes,11,3,1,80,8,0,1,6,4,0,5,Yes
+2,49,Travel_Frequently,Research & Development,8,3,Male,2,2,Research Scientist,2,Married,5130,1,No,23,4,4,80,10,3,3,10,7,1,7,No
+3,37,Travel_Rarely,Research & Development,2,4,Male,2,1,Laboratory Technician,3,Single,2090,6,Yes,15,3,2,80,7,3,3,0,0,0,0,Yes
+4,33,Travel_Frequently,Research & Development,3,4,Female,3,1,Research Scientist,3,Married,2909,1,Yes,11,3,3,80,8,3,3,8,7,3,0,No
+5,27,Travel_Rarely,Research & Development,2,1,Male,3,1,Laboratory Technician,2,Married,3468,9,No,12,3,4,80,6,3,3,2,2,2,2,No
+6,32,Travel_Frequently,Research & Development,2,4,Male,3,1,Laboratory Technician,4,Single,3068,0,No,13,3,3,80,8,2,2,7,7,3,6,No
+7,59,Travel_Rarely,Research & Development,3,3,Female,4,1,Laboratory Technician,1,Married,2670,4,Yes,20,4,1,80,12,3,2,1,0,0,0,No
+8,30,Travel_Rarely,Research & Development,24,4,Male,3,1,Laboratory Technician,3,Divorced,2693,1,No,14,3,2,80,1,2,3,1,0,0,0,No
+9,38,Travel_Frequently,Research & Development,23,4,Male,3,3,Manufacturing Director,3,Single,9526,0,No,21,4,2,80,10,2,3,9,7,1,8,No
+10,36,Travel_Rarely,Research & Development,27,3,Male,3,2,Healthcare Representative,3,Married,5237,6,No,13,3,2,80,17,3,2,7,7,7,7,No

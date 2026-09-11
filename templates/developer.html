@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Developer / Instructor Console</h1>
+    <p>Registered tools, schemas, usage, failures, and challenge statistics — rendered by Django.</p>
+</section>
+
+<div class="metrics">
+    <div class="metric"><div class="label">Registered tools</div><div class="value">{{ tool_rows|length }}</div></div>
+    <div class="metric"><div class="label">Failed executions</div><div class="value">{{ failed_executions }}</div></div>
+    <div class="metric"><div class="label">Challenges</div><div class="value">{{ challenge_stats.total }}</div></div>
+    <div class="metric"><div class="label">Attempts</div><div class="value">{{ challenge_stats.attempts }}</div></div>
+    <div class="metric"><div class="label">Average score</div><div class="value">{{ challenge_stats.average_score }}</div></div>
+</div>
+
+<section class="card">
+    <h2>API configuration</h2>
+    <p>
+        Gemini: <span class="badge {% if api_status.gemini.configured %}configured{% else %}not-configured{% endif %}">{{ api_status.gemini.label }}</span>
+        SerpAPI: <span class="badge {% if api_status.serpapi.configured %}configured{% else %}not-configured{% endif %}">{{ api_status.serpapi.label }}</span>
+        Weather: <span class="badge {% if api_status.openweather.configured %}configured{% else %}not-configured{% endif %}">{{ api_status.openweather.label }}</span>
+        Currency: <span class="badge {% if api_status.currency.configured %}configured{% else %}demo{% endif %}">{{ api_status.currency.label }}</span>
+    </p>
+    <p class="muted">Challenge pass rate: {{ challenge_stats.passed }} / {{ challenge_stats.attempts }}</p>
+</section>
+
+{% for row in tool_rows %}
+<section class="card">
+    <h2>{{ row.tool.name }}</h2>
+    <p>{{ row.tool.description }}</p>
+    <p>
+        <span class="badge info">Uses {{ row.usage }}</span>
+        <span class="badge {% if row.failed %}failed{% else %}ready{% endif %}">Failed {{ row.failed }}</span>
+        <span class="badge local">{{ row.tool.status_label }}</span>
+    </p>
+    <pre>{{ row.schema_pretty }}</pre>
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,17 @@
+Region,Category,Sales,Profit,Discount,Units_Sold,Quarter,Customer_Segment
+North,Technology,12500.50,3200.00,0.05,45,Q1,Enterprise
+North,Furniture,8400.00,1100.50,0.10,30,Q1,Consumer
+South,Technology,15800.00,4100.00,0.00,52,Q1,Enterprise
+South,Office Supplies,3200.00,-450.00,0.20,120,Q1,Consumer
+East,Technology,2100.00,500.00,0.00,10,Q2,Corporate
+East,Furniture,14200.00,2800.00,0.05,40,Q2,Enterprise
+West,Office Supplies,5600.00,1200.00,0.10,150,Q2,Consumer
+West,Technology,18900.00,5400.00,0.00,60,Q2,Corporate
+North,Office Supplies,4100.00,850.00,0.05,95,Q3,Enterprise
+South,Furniture,9800.00,1950.00,0.15,35,Q3,Consumer
+East,Technology,24500.00,6800.00,0.00,75,Q3,Corporate
+West,Furniture,11200.00,-800.00,0.25,42,Q3,Enterprise
+North,Technology,16700.00,4300.00,0.00,55,Q4,Corporate
+South,Office Supplies,4800.00,1100.00,0.05,110,Q4,Enterprise
+East,Office Supplies,6200.00,1450.00,0.10,135,Q4,Consumer
+West,Technology,28900.00,7900.00,0.00,88,Q4,Corporate

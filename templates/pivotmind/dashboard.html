@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-workspace">
+    <div class="hero-header">
+        <div class="hero-badge">⚡ AUTONOMOUS TABULAR ANALYTICS ENGINE</div>
+        <h1 class="hero-title">Upload Dataset & Run 5-Agent Pipeline</h1>
+        <p class="hero-subtitle">Drop your CSV or Excel file to automatically evaluate data hygiene, construct low-token schema summaries, formulate business hypotheses, render Plotly charts in an AST sandbox, and synthesize executive insights.</p>
+    </div>
+
+    <!-- Drag & Drop Uploader Card -->
+    <div class="upload-card glassmorphic">
+        <form method="post" action="{% url 'pivotmind_upload' %}" enctype="multipart/form-data" id="dashboard-upload-form">
+            {% csrf_token %}
+            <div class="dropzone" id="dropzone">
+                <input type="file" name="dataset_file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
+                <div class="dropzone-content" id="dropzone-content">
+                    <div class="dropzone-icon">📁</div>
+                    <div class="dropzone-text">
+                        <strong>Drag and drop your dataset here</strong>
+                        <span>or click to browse files (.csv, .xlsx, .xls)</span>
+                    </div>
+                    <div class="dropzone-file-name" id="file-name-display" hidden></div>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 1.25rem;">
+                <label for="id_user_query" style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; display: block;">
+                    Focus Business Prompt <span style="color: var(--muted); font-weight: normal;">(Optional — leave blank for full Autopilot Mode)</span>
+                </label>
+                <input type="text" name="user_query" id="id_user_query" class="form-control" placeholder="e.g., Analyze revenue trends across regions, or leave blank for Autopilot hypotheses">
+            </div>
+
+            <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div class="demo-buttons">
+                    <span style="font-size: 0.825rem; color: var(--muted); font-weight: 600;">Or launch demo dataset:</span>
+                    <button type="submit" name="demo_dataset" value="sales_performance.csv" class="demo-btn">📊 Sales Performance</button>
+                    <button type="submit" name="demo_dataset" value="customer_churn.csv" class="demo-btn">👥 Customer Churn</button>
+                    <button type="submit" name="demo_dataset" value="employee_attrition.csv" class="demo-btn">💼 Employee Attrition</button>
+                </div>
+                <button type="submit" class="button cta-submit-btn" id="submit-btn">⚡ Run 5-Agent Analysis</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Metrics Overview -->
+<div class="metrics" style="margin-top: 2rem;">
+    <div class="metric">
+        <div class="label">Total Analyses</div>
+        <div class="value">{{ total_analyses }}</div>
+    </div>
+    <div class="metric">
+        <div class="label">Avg Health Score</div>
+        <div class="value">{{ avg_score }}/100</div>
+    </div>
+    <div class="metric">
+        <div class="label">Agent 1: Hygiene</div>
+        <div class="value" style="color: var(--accent); font-size: 1.05rem; margin-top:0.3rem;">Pandas Data Doctor</div>
+    </div>
+    <div class="metric">
+        <div class="label">Agent 3: Hypotheses</div>
+        <div class="value" style="color: #6366f1; font-size: 1.05rem; margin-top:0.3rem;">Autopilot Engine</div>
+    </div>
+    <div class="metric">
+        <div class="label">Agent 4: Sandbox</div>
+        <div class="value" style="color: var(--success); font-size: 1.05rem; margin-top:0.3rem;">AST Plotly Loop</div>
+    </div>
+</div>
+
+<!-- 5-Agent Architecture Diagram -->
+<div class="card" style="margin-top: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin:0;">5-Agent Pipeline Architecture</h2>
+        <span class="badge info">Fully Automated Pipeline</span>
+    </div>
+    <div class="flow" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 1.25rem;">
+        <div class="flow-node accent">
+            <div style="font-size:0.75rem; font-weight:700; color: var(--accent); text-transform:uppercase; letter-spacing:0.05em;">Agent 1</div>
+            <div style="font-weight:700; font-size:1.05rem; margin-top:0.2rem;">Data Doctor</div>
+            <div style="font-size:0.78rem; font-weight:normal; color:var(--muted); margin-top:0.3rem;">Deterministic Pandas hygiene, missing values, duplicates, Health Score (0-100).</div>
+        </div>
+        <div class="flow-node accent">
+            <div style="font-size:0.75rem; font-weight:700; color: #6366f1; text-transform:uppercase; letter-spacing:0.05em;">Agent 2</div>
+            <div style="font-weight:700; font-size:1.05rem; margin-top:0.2rem;">Profiler</div>
+            <div style="font-size:0.78rem; font-weight:normal; color:var(--muted); margin-top:0.3rem;">Generates low-token schema & statistical summary optimized for LLM context.</div>
+        </div>
+        <div class="flow-node accent">
+            <div style="font-size:0.75rem; font-weight:700; color: #ec4899; text-transform:uppercase; letter-spacing:0.05em;">Agent 3</div>
+            <div style="font-weight:700; font-size:1.05rem; margin-top:0.2rem;">Hypothesis Engine</div>
+            <div style="font-size:0.78rem; font-weight:normal; color:var(--muted); margin-top:0.3rem;">Autonomously formulates 3 to 5 ranked business questions & auto-triggers top question.</div>
+        </div>
+        <div class="flow-node accent">
+            <div style="font-size:0.75rem; font-weight:700; color: var(--success); text-transform:uppercase; letter-spacing:0.05em;">Agent 4</div>
+            <div style="font-weight:700; font-size:1.05rem; margin-top:0.2rem;">Visualizer</div>
+            <div style="font-size:0.78rem; font-weight:normal; color:var(--muted); margin-top:0.3rem;">AST sandbox plot generation with self-healing error recovery loop up to 3 retries.</div>
+        </div>
+        <div class="flow-node accent">
+            <div style="font-size:0.75rem; font-weight:700; color: #f59e0b; text-transform:uppercase; letter-spacing:0.05em;">Agent 5</div>
+            <div style="font-weight:700; font-size:1.05rem; margin-top:0.2rem;">Strategist</div>
+            <div style="font-size:0.78rem; font-weight:normal; color:var(--muted); margin-top:0.3rem;">Synthesizes plain-language executive strategic reports & actionable recommendations.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dataset Workspace History Table -->
+<div class="card" style="margin-top: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin:0;">Recent Tabular Workspace Runs</h2>
+        {% if analyses %}
+            <span class="muted" style="font-size: 0.85rem;">Showing {{ analyses|length }} of {{ total_analyses }} runs</span>
+        {% endif %}
+    </div>
+    {% if analyses %}
+        <div class="table-wrap" style="margin-top: 1rem;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Dataset</th>
+                        <th>Health Score</th>
+                        <th>Rating</th>
+                        <th>Rows x Cols</th>
+                        <th>Mode</th>
+                        <th>Top Hypothesis</th>
+                        <th>Execution Time</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in analyses %}
+                        <tr>
+                            <td>#{{ item.pk }}</td>
+                            <td><strong>{{ item.dataset_name }}</strong></td>
+                            <td>
+                                <span class="badge {% if item.health_score >= 85 %}ready{% elif item.health_score >= 60 %}warning{% else %}failed{% endif %}">
+                                    {{ item.health_score }}/100
+                                </span>
+                            </td>
+                            <td>{{ item.health_rating }}</td>
+                            <td>{{ item.row_count }} x {{ item.column_count }}</td>
+                            <td>
+                                {% if item.autopilot_mode %}
+                                    <span class="badge info">Autopilot</span>
+                                {% else %}
+                                    <span class="badge ready">Custom Query</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    {{ item.top_hypothesis.title|default:"Primary Hypothesis" }}
+                                </div>
+                            </td>
+                            <td>{{ item.execution_time }}s</td>
+                            <td class="muted">{{ item.created_at|date:"M d, H:i" }}</td>
+                            <td>
+                                <a href="{% url 'pivotmind_detail' item.pk %}" class="button secondary" style="padding: 0.35rem 0.85rem; font-size: 0.8rem;">Open Workspace →</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="muted" style="margin-top: 1rem;">No dataset analyses executed yet. Use the uploader above or select a demo dataset to start.</p>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("file-input");
+        const fileNameDisplay = document.getElementById("file-name-display");
+        const form = document.getElementById("dashboard-upload-form");
+        const submitBtn = document.getElementById("submit-btn");
+
+        if (dropzone && fileInput) {
+            dropzone.addEventListener("click", () => fileInput.click());
+
+            dropzone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropzone.classList.add("dragover");
+            });
+
+            ["dragleave", "dragend"].forEach(type => {
+                dropzone.addEventListener(type, () => dropzone.classList.remove("dragover"));
+            });
+
+            dropzone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropzone.classList.remove("dragover");
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    updateFileName();
+                }
+            });
+
+            fileInput.addEventListener("change", updateFileName);
+        }
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                const name = fileInput.files[0].name;
+                fileNameDisplay.textContent = "Selected: " + name;
+                fileNameDisplay.hidden = false;
+            }
+        }
+
+        form.addEventListener("submit", function(e) {
+            const workingOverlay = document.getElementById("agent-working");
+            if (workingOverlay) {
+                workingOverlay.hidden = false;
+                workingOverlay.style.display = "grid";
+            }
+        });
+    });
+</script>
+{% endblock %}

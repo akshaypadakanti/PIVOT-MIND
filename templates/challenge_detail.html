@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>{{ challenge.order }}. {{ challenge.title }}</h1>
+    <p>{{ challenge.description }}</p>
+</section>
+
+<section class="card">
+    <p>
+        <span class="badge {{ challenge.difficulty }}">{{ challenge.get_difficulty_display }}</span>
+        <span class="badge info">{{ challenge.points }} points</span>
+    </p>
+    <dl class="kv">
+        <dt>Expected tools</dt>
+        <dd>{{ challenge.expected_tools|join:", " }}</dd>
+        <dt>Scoring</dt>
+        <dd>Tool selection 30 · Arguments 20 · Execution 20 · Final answer 20 · Efficiency 10</dd>
+    </dl>
+    {% if challenge.sample_query %}
+        <p><a class="button secondary" href="?use_sample=1">Use sample query</a></p>
+    {% endif %}
+</section>
+
+<section class="card">
+    <h2>Submit your query</h2>
+    <form method="post" class="js-agent-form">
+        {% csrf_token %}
+        {{ form.query }}
+        <p class="hint">Enter sends the question. Shift+Enter adds a line.</p>
+        <div class="form-actions">
+            <button type="submit">Run and evaluate</button>
+        </div>
+    </form>
+</section>
+
+{% if recent_attempts %}
+<section class="card">
+    <h2>Recent attempts</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Score</th><th>Success</th><th>Tools</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+                {% for attempt in recent_attempts %}
+                    <tr>
+                        <td>{{ attempt.score }}</td>
+                        <td>{% if attempt.success %}<span class="badge success">Passed</span>{% else %}<span class="badge failed">Try again</span>{% endif %}</td>
+                        <td>{{ attempt.selected_tools|join:", " }}</td>
+                        <td>{{ attempt.created_at }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
