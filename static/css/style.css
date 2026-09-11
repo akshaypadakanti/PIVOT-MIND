@@ -703,3 +703,18 @@ textarea:focus,
     transform: rotate(360deg);
   }
 }
+
+.sidebar-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.sidebar-logo-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+}
