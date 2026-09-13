@@ -263,8 +263,14 @@ def challenge_result(request, pk: int):
 
 
 def _get_unified_executions():
-    executions = list(AgentExecution.objects.prefetch_related("tool_executions").all())
-    analyses = list(PivotMindAnalysis.objects.all())
+    try:
+        executions = list(AgentExecution.objects.prefetch_related("tool_executions").all())
+    except Exception:
+        executions = []
+    try:
+        analyses = list(PivotMindAnalysis.objects.all())
+    except Exception:
+        analyses = []
 
     combined = []
     for item in executions:
@@ -424,17 +430,22 @@ import pandas as pd
 
 
 def pivotmind_dashboard(request):
-    analyses = PivotMindAnalysis.objects.all()
-    avg_score = 0.0
-    if analyses.exists():
-        avg_score = round(sum(a.health_score for a in analyses) / analyses.count(), 1)
-    
+    try:
+        analyses = list(PivotMindAnalysis.objects.all())
+        total_count = len(analyses)
+        avg_score = round(sum(a.health_score for a in analyses) / total_count, 1) if total_count > 0 else 0.0
+        recent_analyses = analyses[:10]
+    except Exception:
+        recent_analyses = []
+        total_count = 0
+        avg_score = 0.0
+
     return render(
         request,
         "pivotmind/dashboard.html",
         {
-            "analyses": analyses[:10],
-            "total_analyses": analyses.count(),
+            "analyses": recent_analyses,
+            "total_analyses": total_count,
             "avg_score": avg_score,
             "page_title": "PivotMind Pipeline",
         },
