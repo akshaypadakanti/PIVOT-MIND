@@ -28,11 +28,8 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://*.vercel.app",
-    "https://*.now.sh",
-    "https://*.loca.lt",
-    "https://*.ngrok-free.app",
     "https://*.render.com",
+    "https://*.onrender.com",
     "https://*.railway.app",
     "http://127.0.0.1:8000",
     "http://localhost:8000",
@@ -87,22 +84,12 @@ TEMPLATES = [
     },
 ]
 
-IS_VERCEL = os.getenv("VERCEL") == "1" or "VERCEL" in os.environ
-
-if IS_VERCEL:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": "/tmp/db.sqlite3",
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
