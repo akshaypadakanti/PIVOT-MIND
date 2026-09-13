@@ -472,8 +472,10 @@ def pivotmind_upload(request):
                 pipeline = PivotMindPipeline(df=df, dataset_name=filename, user_query=user_query)
                 result = pipeline.run()
 
-                # Save dataframe persistently to disk for Chatbot & reloads
-                upload_dir = os.path.join(settings.BASE_DIR, "agent", "pivotmind", "user_uploads")
+                if os.getenv("VERCEL") == "1" or "VERCEL" in os.environ:
+                    upload_dir = os.path.join("/tmp", "user_uploads")
+                else:
+                    upload_dir = os.path.join(settings.BASE_DIR, "agent", "pivotmind", "user_uploads")
                 os.makedirs(upload_dir, exist_ok=True)
                 clean_fname = "".join(c for c in filename if c.isalnum() or c in (".", "_", "-")).rstrip()
                 saved_filename = f"analysis_{int(time.time())}_{clean_fname}.csv"
