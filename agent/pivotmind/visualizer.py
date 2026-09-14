@@ -91,7 +91,8 @@ CRITICAL ANALYST RULES:
    `fig.update_traces(textposition='outside')`
 3. Save the final Plotly Figure object in a variable named `fig`.
 4. Use modern dark styling (`template="plotly_dark"`), vibrant colors, readable title, and proper hover data.
-5. Return ONLY executable Python code inside a ```python ... ``` code block.
+5. COLUMN COMPLIANCE: You MUST use the exact column names provided in SUGGESTED X-AXIS / SUGGESTED Y-AXIS or in the user question/hypothesis! NEVER substitute an arbitrary column (like 'Age') when the user requested a specific metric (like 'HourlyRate').
+6. Return ONLY executable Python code inside a ```python ... ``` code block.
 """
 
 
@@ -345,8 +346,8 @@ Please fix the Python code so that it runs cleanly on `df` with columns {list(se
                     fig = px.box(val_counts, y="Count", template="plotly_dark", title=f"Distribution Variance of {x} Counts")
                     code_str = f"val_counts = df['{x}'].astype(str).value_counts().reset_index()\nval_counts.columns = ['{x}', 'Count']\nfig = px.box(val_counts, y='Count', template='plotly_dark')"
             elif viz_type == "histogram":
-                h_col = y if y in self.df.columns else (quant_cols[0] if quant_cols else x)
-                fig = px.histogram(self.df, x=h_col, nbins=25, template="plotly_dark", title=f"Distribution Histogram of {h_col}")
+                h_col = x_col if (x_col in self.df.columns and x_col not in id_cols) else (y_col if (y_col in self.df.columns and y_col not in id_cols) else (quant_cols[0] if quant_cols else self.df.columns[0]))
+                fig = px.histogram(self.df, x=h_col, nbins=25, template="plotly_dark", title=f"Distribution Frequency Histogram: {h_col}")
                 code_str = f"fig = px.histogram(df, x='{h_col}', nbins=25, template='plotly_dark')"
             else:
                 # Default Bar Chart

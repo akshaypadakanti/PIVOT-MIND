@@ -26,6 +26,8 @@ CRITICAL ANALYST DOMAIN RULES:
 3. USER QUERY ALIGNMENT: If a USER QUERY is provided (e.g., "how many students are ther from aiml dept"), prioritize answering that exact business question! Identify the target column (e.g. 'Department', 'Branch', 'Course', 'Stream') and choose 'pie_chart' or 'bar_chart' to display counts per group.
 4. CHART TYPE DIVERSITY: Vary target_visualization across generated hypotheses! Include a rich mix of chart types: 'pie_chart', 'line_chart', 'scatter_plot', 'box_plot', 'histogram', and 'bar_chart'.
 5. AUTOPILOT QUALITY: In Autopilot Mode, focus on meaningful business metrics (Revenue, Profit, Sales, Marks, Score, Age, Salary, Units) vs primary categorical dimensions (Department, Region, Category, Role).
+6. DERIVED COLUMN ISOLATION: NEVER analyze or compare a derived/binned column (e.g. 'AgeGroup', 'SalarySlab', 'IncomeBucket', 'TenureGroup') against its raw source quantitative column (e.g. 'Age', 'Salary', 'Income', 'Tenure'). This produces redundant, uninsightful questions like "How does Age vary across AgeGroup?".
+7. TIME SERIES GROUNDING: NEVER suggest a line_chart showing progression over "sequential observations" or row index for static tabular data unless a true DATETIME or timestamp column exists in the schema.
 
 Return your response strictly as a JSON object matching this exact structure:
 {
@@ -169,7 +171,20 @@ class HypothesisEngine:
         cat3 = cat_cols[2] if len(cat_cols) > 2 else cat2
         cat4 = cat_cols[3] if len(cat_cols) > 3 else cat3
 
-        quant1 = quant_cols[0] if quant_cols else ""
+        def is_derived_pair(cat_c: str, quant_c: str) -> bool:
+            if not cat_c or not quant_c:
+                return False
+            c_clean, q_clean = cat_c.lower(), quant_c.lower()
+            return q_clean in c_clean or c_clean.replace("group", "").replace("bucket", "").replace("slab", "").replace("_", "") == q_clean
+
+        # Pick a quant column for cat1 that is not derived from cat1
+        target_quant_h1 = ""
+        for q in quant_cols:
+            if not is_derived_pair(cat1, q):
+                target_quant_h1 = q
+                break
+
+        quant1 = target_quant_h1 or (quant_cols[0] if quant_cols else "")
         quant2 = quant_cols[1] if len(quant_cols) > 1 else quant1
         quant3 = quant_cols[2] if len(quant_cols) > 2 else quant2
         quant4 = quant_cols[3] if len(quant_cols) > 3 else quant3
@@ -206,17 +221,17 @@ class HypothesisEngine:
                 "recommended_x": cat1,
                 "recommended_y": "",
             }
-        elif quant1 and cat1:
+        elif target_quant_h1 and cat1:
             h1 = {
                 "id": 1,
-                "title": f"Performance Analysis: {quant1} by {cat1}",
-                "question": f"How does {quant1} vary across {cat1} cohorts?",
-                "rationale": f"Segmenting {quant1} across {cat1} highlights key operational and business drivers.",
+                "title": f"Performance Analysis: {target_quant_h1} by {cat1}",
+                "question": f"How does {target_quant_h1} vary across {cat1} cohorts?",
+                "rationale": f"Segmenting {target_quant_h1} across {cat1} highlights key operational and business drivers.",
                 "category": "trend_analysis",
                 "priority_rank": 1,
                 "target_visualization": "bar_chart",
                 "recommended_x": cat1,
-                "recommended_y": quant1,
+                "recommended_y": target_quant_h1,
             }
         else:
             h1 = {
@@ -229,6 +244,32 @@ class HypothesisEngine:
                 "target_visualization": "bar_chart",
                 "recommended_x": cat1,
                 "recommended_y": "",
+            }
+
+        # Build Hypothesis 3: Only output line_chart if date_col exists
+        if date_col:
+            h3 = {
+                "id": 3,
+                "title": f"Timeline Trend & Progression ({quant1 or cat1})",
+                "question": f"How does {quant1 or cat1} progress over time across {date_col}?",
+                "rationale": f"Tracking metric trajectory over chronological date dimension {date_col}.",
+                "category": "trend_analysis",
+                "priority_rank": 3,
+                "target_visualization": "line_chart",
+                "recommended_x": date_col,
+                "recommended_y": quant1,
+            }
+        else:
+            h3 = {
+                "id": 3,
+                "title": f"Cohort Variance Analysis: {quant2 or quant1} by {cat2}",
+                "question": f"How does {quant2 or quant1} vary across {cat2} cohorts?",
+                "rationale": f"Evaluating performance distributions across {cat2} segments.",
+                "category": "cohort_segmentation",
+                "priority_rank": 3,
+                "target_visualization": "bar_chart",
+                "recommended_x": cat2,
+                "recommended_y": quant2 or quant1,
             }
 
         hypotheses = [
@@ -244,27 +285,17 @@ class HypothesisEngine:
                 "recommended_x": cat2,
                 "recommended_y": "",
             },
-            {
-                "id": 3,
-                "title": f"Metric Trend & Progression ({quant1 or cat1})",
-                "question": f"How does {quant1 or cat1} progress over sequential observations?",
-                "rationale": "Tracking trajectory and sequential trend variations.",
-                "category": "trend_analysis",
-                "priority_rank": 3,
-                "target_visualization": "line_chart",
-                "recommended_x": date_col or cat1,
-                "recommended_y": quant1,
-            },
+            h3,
             {
                 "id": 4,
-                "title": f"Correlation Scatter: {quant2 or quant1} vs {quant1 or cat1}" if quant2 else f"Category Breakdown ({cat3})",
-                "question": f"Is there a statistical correlation between {quant2} and {quant1}?" if quant2 else f"What is the distribution across {cat3}?",
-                "rationale": "Identifying bivariate relationship patterns." if quant2 else f"Segmenting dataset across {cat3}.",
-                "category": "correlation" if quant2 else "cohort_segmentation",
+                "title": f"Correlation Scatter: {quant2 or quant1} vs {quant1 or cat1}" if (quant2 and quant2 != quant1) else f"Category Breakdown ({cat3})",
+                "question": f"Is there a statistical correlation between {quant2} and {quant1}?" if (quant2 and quant2 != quant1) else f"What is the distribution across {cat3}?",
+                "rationale": "Identifying bivariate relationship patterns." if (quant2 and quant2 != quant1) else f"Segmenting dataset across {cat3}.",
+                "category": "correlation" if (quant2 and quant2 != quant1) else "cohort_segmentation",
                 "priority_rank": 4,
-                "target_visualization": "scatter_plot" if quant2 else "bar_chart",
-                "recommended_x": quant1 if quant2 else cat3,
-                "recommended_y": quant2 if quant2 else "",
+                "target_visualization": "scatter_plot" if (quant2 and quant2 != quant1) else "bar_chart",
+                "recommended_x": quant1 if (quant2 and quant2 != quant1) else cat3,
+                "recommended_y": quant2 if (quant2 and quant2 != quant1) else "",
             },
             {
                 "id": 5,

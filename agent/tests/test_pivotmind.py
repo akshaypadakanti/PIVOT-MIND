@@ -242,6 +242,79 @@ class PivotMindPipelineTests(TestCase):
         self.assertIn(col_y, ["EnvironmentSatisfaction", "JobSatisfaction", "RelationshipSatisfaction"])
 
 
+    def test_semantic_classifier_datetime_exclusions(self):
+        hr_data = {
+            "Education (Years)": [12, 16, 14, 18, 16],
+            "MonthlyIncome": [5000, 7500, 6200, 11000, 4800],
+            "MonthlyRate": [12000, 18000, 15000, 22000, 11000],
+            "OverTime": ["Yes", "No", "Yes", "No", "No"],
+            "JoinDate": ["2020-01-15", "2021-03-22", "2019-11-05", "2022-07-10", "2018-05-18"],
+        }
+        hr_df = pd.DataFrame(hr_data)
+        classifier = SemanticClassifier(hr_df)
+
+        self.assertEqual(classifier.classify_column("Education (Years)"), "QUANTITATIVE")
+        self.assertEqual(classifier.classify_column("MonthlyIncome"), "QUANTITATIVE")
+        self.assertEqual(classifier.classify_column("MonthlyRate"), "QUANTITATIVE")
+        self.assertEqual(classifier.classify_column("OverTime"), "CATEGORICAL")
+        self.assertEqual(classifier.classify_column("JoinDate"), "DATETIME")
+
+    def test_hypothesis_engine_no_derived_pairs_and_no_fake_line_chart(self):
+        df_static = pd.DataFrame({
+            "Age": [25, 35, 45, 55],
+            "AgeGroup": ["18-29", "30-39", "40-49", "50+"],
+            "MonthlyIncome": [4000, 6000, 8000, 10000],
+        })
+        profiler_summary = DatasetProfiler(df_static).get_low_token_representation()
+        engine = HypothesisEngine(profile_summary=profiler_summary, user_query="", df=df_static)
+        hyp_report = engine.generate_hypotheses()
+
+        for hyp in hyp_report.get("hypotheses", []):
+            x = hyp.get("recommended_x", "")
+            y = hyp.get("recommended_y", "")
+            # Verify Age vs AgeGroup derived pair is not recommended
+            if (x == "Age" and y == "AgeGroup") or (x == "AgeGroup" and y == "Age"):
+                self.fail(f"Hypothesis paired raw variable Age with derived variable AgeGroup: {hyp}")
+
+            # Verify line_chart is not suggested when no datetime exists
+            if hyp.get("target_visualization") == "line_chart":
+                self.fail(f"Line chart suggested for static dataset without datetime column: {hyp}")
+
+    def test_visualizer_histogram_column_matching(self):
+        df_hr = pd.DataFrame({
+            "Age": [25, 30, 35, 40, 45],
+            "HourlyRate": [45, 65, 80, 55, 70],
+        })
+        hypothesis = {
+            "title": "Distribution Frequency Histogram: HourlyRate",
+            "question": "What is the statistical frequency density distribution of HourlyRate?",
+            "target_visualization": "histogram",
+            "recommended_x": "HourlyRate",
+            "recommended_y": "",
+        }
+        viz = Visualizer(df=df_hr, hypothesis=hypothesis, dataset_name="HR_Dataset")
+        res = viz._auto_plotly_express_fallback("histogram", "HourlyRate", "")
+        self.assertEqual(res["status"], "success")
+        fig_dict = res["fig_json"]
+        title_text = fig_dict.get("layout", {}).get("title", {}).get("text", "")
+        x_title = fig_dict.get("layout", {}).get("xaxis", {}).get("title", {}).get("text", "")
+        self.assertIn("HourlyRate", title_text)
+        self.assertEqual(x_title, "HourlyRate")
+
+    def test_executive_strategist_grounded_impact(self):
+        hr_df = pd.DataFrame({
+            "EmployeeNumber": [1, 2, 3],
+            "MonthlyIncome": [5000, 7000, 6000],
+            "Attrition": ["No", "Yes", "No"],
+        })
+        doctor = DataDoctor(hr_df, dataset_name="HR_Analytics.csv").analyze()
+        strat = ExecutiveStrategist(doctor_report=doctor, profile_summary="", hypothesis={}, viz_report={}, dataset_name="HR_Analytics.csv", df=hr_df)
+        out = strat._fallback_synthesis()
+        # Verify no hardcoded unsupported percentages like 20–30% in impact
+        self.assertNotIn("20–30%", out)
+        self.assertNotIn("20-30%", out)
+        self.assertIn("Potential impact", out)
+
     def test_pivotmind_pipeline_end_to_end(self):
         pipeline = PivotMindPipeline(df=self.df, dataset_name="TestSales", user_query="how many students are ther from aiml dept")
         result = pipeline.run()
@@ -250,4 +323,5 @@ class PivotMindPipelineTests(TestCase):
         self.assertIn("health_score", result)
         self.assertIn("executive_summary", result)
         self.assertNotEqual(result["top_hypothesis"].get("recommended_y"), "Contact Number")
+
 

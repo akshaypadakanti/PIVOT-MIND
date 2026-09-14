@@ -28,7 +28,7 @@ CRITICAL ANALYST DOMAIN RULES:
    - For any other custom dataset domain: Identify the core entity and metrics from the dataset columns and tailor all recommendations strictly to that domain.
 2. ABSOLUTE DATA GROUNDING: Explicitly reference actual column names, metric averages, and specific categorical cohorts from the dataset profile. NEVER output generic sales/churn strategies for an HR, Healthcare, Housing, or Education dataset!
 3. IDENTIFIER ISOLATION: NEVER analyze or mention identifier columns like 'Unnamed: 0', 'EmployeeNumber', 'ID', 'SSN', 'index' as business metrics.
-4. AUTHORITATIVE EXECUTIVE STRUCTURE: Use bold highlights, specific actionable steps, and clear projected impact.
+4. EVIDENCE-GROUNDED IMPACT: Frame projected outcomes realistically and cautiously based on dataset metrics. DO NOT invent arbitrary or unsubstantiated percentage reductions (e.g. 'reduce attrition by 20–30%') unless supported by explicit statistical/predictive modeling. Use grounded phrasing (e.g., 'Potential impact: targeted retention initiatives may reduce voluntary employee attrition, subject to validation through historical/predictive analysis').
 
 Structure your markdown report into these four exact sections:
 
@@ -42,7 +42,7 @@ A 2-3 sentence summary of dataset domain health, primary dimensions analyzed, an
 Bulleted 30-60-90 day strategic execution steps for leadership, operational, or department teams.
 
 ### 4. Projected Business & Operational Impact
-Quantified statements outlining expected performance improvement based on the dataset domain metrics.
+Evidence-grounded statements outlining expected performance improvement based on dataset domain metrics (avoid inventing unsupported exact percentages).
 """
 
 
@@ -261,7 +261,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Audit high-attrition departments and survey employee satisfaction across `EnvironmentSatisfaction` and `WorkLifeBalance` dimensions.
 - **Phase 2 (Days 31–60)**: Implement flexible commuting policies for high-distance cohorts and restructure excessive overtime schedules.
 - **Phase 3 (Days 61–90)**: Roll out merit-based retention bonuses and clear promotion benchmarks for key technical and managerial roles."""
-            impact = "Executing these strategic HR workforce initiatives is projected to reduce voluntary employee attrition by **20–30%**, increase workplace engagement scores by **15–25%**, and save significant annual talent replacement costs."
+            impact = "Potential impact: executing these strategic HR workforce initiatives may reduce voluntary employee attrition, improve workplace satisfaction scores, and save talent replacement costs, subject to validation through predictive modeling."
 
         elif domain == "EDUCATION":
             domain_name = "Academic Performance & Student Success Operations"
@@ -271,7 +271,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Identify low-performing student cohorts needing academic tutoring and mentorship.
 - **Phase 2 (Days 31–60)**: Launch specialized skill workshops and placement bootcamps.
 - **Phase 3 (Days 61–90)**: Track midterm score improvements and student placement conversions."""
-            impact = "Implementing these academic interventions is projected to improve average student performance by **12–18%** and boost campus placement conversion rates by **15–25%**."
+            impact = "Potential impact: implementing these academic interventions may improve average student performance and campus placement conversion rates, subject to validation through historical cohort analysis."
 
         elif domain == "HEALTHCARE":
             domain_name = "Healthcare & Patient Care Operations"
@@ -281,7 +281,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Audit patient throughput and identify key bottlenecks in care delivery.
 - **Phase 2 (Days 31–60)**: Standardize clinical care pathways for top diagnostic categories.
 - **Phase 3 (Days 61–90)**: Optimize bed scheduling and staff shift coverage."""
-            impact = "Implementing these healthcare operational strategies is projected to improve patient recovery outcomes by **15–22%** and reduce average hospital length of stay by **10–18%**."
+            impact = "Potential impact: implementing these healthcare operational strategies may improve patient recovery outcomes and optimize average hospital length of stay, subject to clinical pathway validation."
 
         elif domain == "HOUSING":
             domain_name = "Real Estate & Asset Valuation Operations"
@@ -291,7 +291,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Analyze valuation variances across property size and location tiers.
 - **Phase 2 (Days 31–60)**: Implement dynamic valuation algorithms incorporating local property trends.
 - **Phase 3 (Days 61–90)**: Portfolio reallocation toward high-yield property assets."""
-            impact = "Optimizing real estate valuation and pricing strategies is projected to increase average asset realization by **10–18%** and accelerate property turnover."
+            impact = "Potential impact: optimizing real estate valuation and pricing strategies may increase average asset realization and property turnover, subject to market validation."
 
         elif domain == "FINANCE":
             domain_name = "Banking & Credit Risk Operations"
@@ -301,7 +301,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Re-segment portfolio into high-yield, medium-risk, and premium low-risk tiers based on income and credit metrics.
 - **Phase 2 (Days 31–60)**: Implement automated risk-scoring triggers to alert relationship managers prior to payment default.
 - **Phase 3 (Days 61–90)**: Roll out targeted campaign offers to expand credit limits for top-performing zero-delinquency cohorts."""
-            impact = "Implementing these credit risk strategies is projected to reduce delinquency rates by **18–25%** and increase net portfolio yields by **12–15%**."
+            impact = "Potential impact: implementing these credit risk strategies may mitigate delinquency exposure and improve net portfolio yield, subject to risk modeling and validation."
 
         elif domain == "SALES":
             domain_name = "Customer Revenue & Growth Operations"
@@ -311,7 +311,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Audit top customer segments and identify primary drivers of churn and expansion.
 - **Phase 2 (Days 31–60)**: Launch automated re-engagement workflows for at-risk cohorts.
 - **Phase 3 (Days 61–90)**: Optimize product tiering and cross-sell campaigns for active accounts."""
-            impact = "Executing these customer growth strategies is projected to reduce churn by **20–30%** and increase customer lifetime revenue by **15–22%**."
+            impact = "Potential impact: executing these customer growth strategies may reduce churn and expand customer lifetime value, subject to campaign A/B testing."
 
         else:
             domain_name = "Business & Process Operations"
@@ -321,7 +321,7 @@ Generate a comprehensive Executive Strategic Report tailored specifically to the
             roadmap = """- **Phase 1 (Days 1–30)**: Align cross-functional leadership on key performance indicators (KPIs) and operational targets.
 - **Phase 2 (Days 31–60)**: Reallocate operational budgets to top-performing nodes.
 - **Phase 3 (Days 61–90)**: Evaluate 90-day throughput metrics and scale winning operational workflows."""
-            impact = "Achieving these operational efficiency benchmarks is projected to boost process yield by **15–25%** and improve overall operational margin efficiency."
+            impact = "Potential impact: achieving these operational efficiency benchmarks may improve process yield and overall margin performance, subject to operational validation."
 
         return f"""### 1. Executive Strategic Summary
 Completed automated strategic analysis of **{self.dataset_name}** ({total_rows} records across {total_cols} dimensions) for **{domain_name}** (Data Health Baseline: **{health_score}/100 - {rating}**). Strategic synthesis identifies immediate operational optimization, cohort enhancement, and performance expansion opportunities.{evidence_section}
