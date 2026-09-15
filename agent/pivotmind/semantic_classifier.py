@@ -37,19 +37,20 @@ DATETIME_KEYWORDS = {
 
 class SemanticClassifier:
     """
-    Analyzes DataFrame columns and classifies them semantically to prevent
-    absurd statistical operations (e.g. taking the mean or boxplot of phone numbers or index columns).
+    Analyzes DataFrame columns using a deterministic-first semantic typing pipeline:
+    RAW DATA -> Pandas Dtype Inspection -> Deterministic Base Type -> Refinement -> Final Semantic Type.
     """
 
     def __init__(self, df: pd.DataFrame):
         self.df = df
 
     def classify_column(self, col_name: str) -> SemanticType:
-        """Determines the semantic type of a single column."""
-        name_clean = str(col_name).strip().lower()
+        """Determines the semantic type of a single column using deterministic rules."""
+        col_str = str(col_name)
+        name_clean = col_str.strip().lower()
         name_words = set(re.split(r"[_\s\-\.\/\\]+", name_clean))
 
-        # Check explicit identifier keywords or patterns (e.g. unnamed, employee_number)
+        # Check explicit identifier keywords or patterns
         if name_clean.startswith("unnamed") or any(kw in name_clean for kw in IDENTIFIER_KEYWORDS) or bool(IDENTIFIER_KEYWORDS & name_words):
             return "IDENTIFIER"
 
@@ -60,65 +61,73 @@ class SemanticClassifier:
         total_rows = len(self.df)
         unique_cnt = series.nunique()
 
-        # Priority 1: Check native pandas datetime dtype
+        # Step 1: Pandas Dtype Inspection & Deterministic Base Type
         if pd.api.types.is_datetime64_any_dtype(series):
             return "DATETIME"
 
-        # Explicit non-datetime business terms that contain time/month/year substrings
-        NON_DATETIME_EXCLUSIONS = {
-            "overtime", "monthlyincome", "monthlyrate", "hourlyrate", "dailyrate",
-            "education (years)", "yearsatcompany", "yearsincurrentrole",
-            "yearswithcurrmanager", "yearssincelastpromotion", "totalworkingyears",
-            "tenure_years", "tenure", "income", "salary", "rate"
-        }
-        is_excluded = any(ex in name_clean for ex in NON_DATETIME_EXCLUSIONS)
+        is_native_numeric = pd.api.types.is_numeric_dtype(series)
 
-        # Check if numeric
-        if pd.api.types.is_numeric_dtype(series):
-            if not is_excluded:
-                # Check if calendar year column (e.g. 'year' or 'yr' with values 1900..2100)
-                if name_clean in {"year", "yr", "calendar_year", "birth_year"} or name_words.intersection({"year", "yr"}):
-                    valid = series.dropna()
-                    if not valid.empty and valid.min() >= 1900 and valid.max() <= 2100:
+        # Infer base type for Object / String columns
+        is_string_numeric = False
+        is_string_date = False
+
+        if not is_native_numeric and (pd.api.types.is_string_dtype(series) or pd.api.types.is_object_dtype(series)):
+            # Test if numeric string values (e.g. "12.5", "100")
+            numeric_parsed = pd.to_numeric(series.head(20), errors="coerce")
+            if numeric_parsed.notna().sum() / len(series.head(20)) >= 0.8:
+                is_string_numeric = True
+            else:
+                # Test if ISO / date string values (e.g. "2023-01-15")
+                has_date_kw = any(k in name_clean for k in ["date", "timestamp", "created", "updated"])
+                if has_date_kw:
+                    date_parsed = pd.to_datetime(series.head(20), errors="coerce")
+                    if date_parsed.notna().sum() / len(series.head(20)) >= 0.8:
+                        is_string_date = True
+
+        if is_string_date:
+            return "DATETIME"
+
+        # Step 2: Deterministic Guardrail for Numeric Columns
+        # Numeric columns (native float64/int64 or string-numeric) MUST NOT become DATETIME
+        # unless there is explicit deterministic evidence (calendar year [1900..2100] or Unix epoch > 1e9).
+        if is_native_numeric or is_string_numeric:
+            valid_num = series.dropna()
+            if is_string_numeric:
+                valid_num = pd.to_numeric(valid_num, errors="coerce").dropna()
+
+            if not valid_num.empty:
+                # Check calendar year integer (e.g., column named 'year' or 'birth_year' with values 1900..2100)
+                is_year_col = (name_clean in {"year", "yr", "calendar_year", "birth_year"} or bool(name_words & {"year", "yr"}))
+                if is_year_col and "education" not in name_clean and "tenure" not in name_clean and "working" not in name_clean:
+                    if valid_num.min() >= 1900 and valid_num.max() <= 2100:
                         return "DATETIME"
+
+                # Check integer Unix epoch timestamp (> 1e9)
+                if valid_num.min() > 1e9 and valid_num.max() < 2e9 and (valid_num % 1 == 0).all():
+                    return "DATETIME"
 
             # Check if integer sequence with high uniqueness (like IDs or phone numbers >= 7 digits)
             if unique_cnt > 0:
-                sample_vals = series.head(10).astype(str).tolist()
-                # Large integers with >= 7 digits (e.g., phone numbers like 9876543210 or 10-digit IDs)
+                sample_vals = valid_num.head(10).astype(str).tolist()
                 is_long_num = any(len(re.sub(r"\D", "", val)) >= 7 for val in sample_vals if val != "nan")
                 if is_long_num and unique_cnt / total_rows > 0.3:
                     return "IDENTIFIER"
 
-                # Check if values look like row indices or 100% unique sequential IDs
                 if unique_cnt == total_rows and total_rows > 10:
                     return "IDENTIFIER"
 
-            # Low cardinality numeric (e.g. Rating 1-5, Grade 1-4) can be categorical or numeric
+            # Low cardinality numeric (e.g. Rating 1-5, Grade 1-4)
             if unique_cnt <= 5 and total_rows > 20:
                 return "CATEGORICAL"
 
+            # By default, all numeric columns ARE QUANTITATIVE
             return "QUANTITATIVE"
 
-        # Check Datetime for String/Object columns
-        if not is_excluded:
-            # Match date indicators in string column names (e.g. date, joindate, hiredate, timestamp, created_at)
-            has_date_kw = any(k in name_clean for k in ["date", "timestamp", "created", "updated"])
-            if has_date_kw:
-                try:
-                    parsed = pd.to_datetime(series.head(10), errors="coerce")
-                    if parsed.notna().sum() > 0:
-                        return "DATETIME"
-                except Exception:
-                    pass
-
-        # Text/String columns
-        if any(kw in name_clean for kw in CATEGORICAL_KEYWORDS) or is_excluded:
+        # Step 3: Text / String columns
+        if any(kw in name_clean for kw in CATEGORICAL_KEYWORDS):
             return "CATEGORICAL"
 
-        # High uniqueness text could be name/email identifier
         if unique_cnt / total_rows > 0.8 and total_rows > 10:
-            # Check if email or name
             if "@" in str(series.iloc[0]) or "name" in name_clean:
                 return "IDENTIFIER"
 

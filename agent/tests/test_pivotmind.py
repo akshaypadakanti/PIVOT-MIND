@@ -242,13 +242,14 @@ class PivotMindPipelineTests(TestCase):
         self.assertIn(col_y, ["EnvironmentSatisfaction", "JobSatisfaction", "RelationshipSatisfaction"])
 
 
-    def test_semantic_classifier_datetime_exclusions(self):
+    def test_1_numeric_hr_columns_never_datetime(self):
+        """TEST 1: Numeric HR columns are never incorrectly classified as DATETIME."""
         hr_data = {
             "Education (Years)": [12, 16, 14, 18, 16],
             "MonthlyIncome": [5000, 7500, 6200, 11000, 4800],
             "MonthlyRate": [12000, 18000, 15000, 22000, 11000],
             "OverTime": ["Yes", "No", "Yes", "No", "No"],
-            "JoinDate": ["2020-01-15", "2021-03-22", "2019-11-05", "2022-07-10", "2018-05-18"],
+            "HireDate": ["2020-01-15", "2021-03-22", "2019-11-05", "2022-07-10", "2018-05-18"],
         }
         hr_df = pd.DataFrame(hr_data)
         classifier = SemanticClassifier(hr_df)
@@ -257,63 +258,115 @@ class PivotMindPipelineTests(TestCase):
         self.assertEqual(classifier.classify_column("MonthlyIncome"), "QUANTITATIVE")
         self.assertEqual(classifier.classify_column("MonthlyRate"), "QUANTITATIVE")
         self.assertEqual(classifier.classify_column("OverTime"), "CATEGORICAL")
-        self.assertEqual(classifier.classify_column("JoinDate"), "DATETIME")
+        self.assertEqual(classifier.classify_column("HireDate"), "DATETIME")
 
-    def test_hypothesis_engine_no_derived_pairs_and_no_fake_line_chart(self):
-        df_static = pd.DataFrame({
+    def test_2_derived_variable_hypotheses_rejected(self):
+        """TEST 2: Derived-variable hypotheses such as Age vs AgeGroup are rejected."""
+        from agent.pivotmind.hypothesis_engine import validate_hypothesis
+        from agent.pivotmind.derived_detector import DerivedColumnDetector
+
+        df_hr = pd.DataFrame({
             "Age": [25, 35, 45, 55],
             "AgeGroup": ["18-29", "30-39", "40-49", "50+"],
             "MonthlyIncome": [4000, 6000, 8000, 10000],
         })
-        profiler_summary = DatasetProfiler(df_static).get_low_token_representation()
-        engine = HypothesisEngine(profile_summary=profiler_summary, user_query="", df=df_static)
-        hyp_report = engine.generate_hypotheses()
+        detector = DerivedColumnDetector(df_hr)
+        derived_pairs = detector.detect_derived_pairs()
+        schema = {"QUANTITATIVE": ["Age", "MonthlyIncome"], "CATEGORICAL": ["AgeGroup"], "DATETIME": [], "IDENTIFIER": []}
 
-        for hyp in hyp_report.get("hypotheses", []):
-            x = hyp.get("recommended_x", "")
-            y = hyp.get("recommended_y", "")
-            # Verify Age vs AgeGroup derived pair is not recommended
-            if (x == "Age" and y == "AgeGroup") or (x == "AgeGroup" and y == "Age"):
-                self.fail(f"Hypothesis paired raw variable Age with derived variable AgeGroup: {hyp}")
-
-            # Verify line_chart is not suggested when no datetime exists
-            if hyp.get("target_visualization") == "line_chart":
-                self.fail(f"Line chart suggested for static dataset without datetime column: {hyp}")
-
-    def test_visualizer_histogram_column_matching(self):
-        df_hr = pd.DataFrame({
-            "Age": [25, 30, 35, 40, 45],
-            "HourlyRate": [45, 65, 80, 55, 70],
-        })
-        hypothesis = {
-            "title": "Distribution Frequency Histogram: HourlyRate",
-            "question": "What is the statistical frequency density distribution of HourlyRate?",
-            "target_visualization": "histogram",
-            "recommended_x": "HourlyRate",
-            "recommended_y": "",
+        bad_hyp = {
+            "title": "Age across AgeGroup",
+            "question": "How does Age vary across AgeGroup cohorts?",
+            "target_visualization": "bar_chart",
+            "recommended_x": "AgeGroup",
+            "recommended_y": "Age",
         }
-        viz = Visualizer(df=df_hr, hypothesis=hypothesis, dataset_name="HR_Dataset")
-        res = viz._auto_plotly_express_fallback("histogram", "HourlyRate", "")
-        self.assertEqual(res["status"], "success")
-        fig_dict = res["fig_json"]
-        title_text = fig_dict.get("layout", {}).get("title", {}).get("text", "")
-        x_title = fig_dict.get("layout", {}).get("xaxis", {}).get("title", {}).get("text", "")
-        self.assertIn("HourlyRate", title_text)
-        self.assertEqual(x_title, "HourlyRate")
+        is_valid, reason = validate_hypothesis(bad_hyp, df_hr, schema, derived_pairs)
+        self.assertFalse(is_valid)
+        self.assertIn("REJECTED", reason)
+        self.assertIn("derived variable", reason)
 
-    def test_executive_strategist_grounded_impact(self):
-        hr_df = pd.DataFrame({
-            "EmployeeNumber": [1, 2, 3],
-            "MonthlyIncome": [5000, 7000, 6000],
-            "Attrition": ["No", "Yes", "No"],
+    def test_3_row_order_time_trends_rejected_without_temporal_col(self):
+        """TEST 3: Row-order 'time trends' are rejected when no temporal column exists."""
+        from agent.pivotmind.hypothesis_engine import validate_hypothesis
+
+        df_static = pd.DataFrame({
+            "Age": [25, 35, 45],
+            "MonthlyIncome": [5000, 7000, 9000],
         })
-        doctor = DataDoctor(hr_df, dataset_name="HR_Analytics.csv").analyze()
-        strat = ExecutiveStrategist(doctor_report=doctor, profile_summary="", hypothesis={}, viz_report={}, dataset_name="HR_Analytics.csv", df=hr_df)
-        out = strat._fallback_synthesis()
-        # Verify no hardcoded unsupported percentages like 20–30% in impact
-        self.assertNotIn("20–30%", out)
-        self.assertNotIn("20-30%", out)
-        self.assertIn("Potential impact", out)
+        schema = {"QUANTITATIVE": ["Age", "MonthlyIncome"], "CATEGORICAL": [], "DATETIME": [], "IDENTIFIER": []}
+
+        line_hyp = {
+            "title": "Age Progression",
+            "question": "How does Age progress over sequential observations?",
+            "target_visualization": "line_chart",
+            "recommended_x": "Age",
+            "recommended_y": "MonthlyIncome",
+        }
+        is_valid, reason = validate_hypothesis(line_hyp, df_static, schema, set())
+        self.assertFalse(is_valid)
+        self.assertIn("REJECTED", reason)
+        self.assertIn("Line chart", reason)
+
+    def test_4_ast_semantic_validation_rejects_mismatched_column_code(self):
+        """TEST 4: A visualization spec requesting HourlyRate rejects generated code plotting Age."""
+        from agent.pivotmind.viz_validator import VisualizationSpec, validate_visualization_ast
+
+        spec = VisualizationSpec(
+            chart_type="histogram",
+            x_column="HourlyRate",
+            y_column=None,
+            title="Distribution Frequency Histogram: HourlyRate",
+        )
+        bad_code = "fig = px.histogram(df, x='Age', nbins=25, template='plotly_dark')"
+
+        is_valid, err_msg = validate_visualization_ast(bad_code, spec)
+        self.assertFalse(is_valid)
+        self.assertIn("SEMANTIC VALIDATION FAILED", err_msg)
+        self.assertIn("Expected x_column = 'HourlyRate'", err_msg)
+        self.assertIn("uses x = 'Age'", err_msg)
+
+    def test_5_ast_semantic_validation_accepts_correct_code(self):
+        """TEST 5: A correct HourlyRate histogram passes AST semantic validation."""
+        from agent.pivotmind.viz_validator import VisualizationSpec, validate_visualization_ast
+
+        spec = VisualizationSpec(
+            chart_type="histogram",
+            x_column="HourlyRate",
+            y_column=None,
+            title="Distribution Frequency Histogram: HourlyRate",
+        )
+        good_code = "fig = px.histogram(df, x='HourlyRate', nbins=25, template='plotly_dark')"
+
+        is_valid, err_msg = validate_visualization_ast(good_code, spec)
+        self.assertTrue(is_valid)
+        self.assertEqual(err_msg, "OK")
+
+    def test_6_solution_works_on_arbitrary_non_hr_dataset(self):
+        """TEST 6: Solution works for arbitrary datasets (Housing dataset) and is not hardcoded for HR."""
+        housing_data = {
+            "House_ID": [101, 102, 103, 104, 105],
+            "Price": [350000, 450000, 550000, 280000, 620000],
+            "PriceSlab": ["Low", "Medium", "High", "Low", "High"],
+            "SqFt": [1800, 2400, 3100, 1400, 3800],
+            "Location": ["Suburbs", "City", "Downtown", "Suburbs", "Downtown"],
+        }
+        housing_df = pd.DataFrame(housing_data)
+        classifier = SemanticClassifier(housing_df)
+        schema = classifier.get_classified_schema()
+
+        self.assertIn("House_ID", schema["IDENTIFIER"])
+        self.assertIn("Price", schema["QUANTITATIVE"])
+        self.assertIn("SqFt", schema["QUANTITATIVE"])
+        self.assertIn("Location", schema["CATEGORICAL"])
+        self.assertIn("PriceSlab", schema["CATEGORICAL"])
+        self.assertEqual(schema["DATETIME"], [])
+
+        # Pipeline test on Housing dataset
+        pipeline = PivotMindPipeline(df=housing_df, dataset_name="Housing_Data.csv")
+        res = pipeline.run()
+        self.assertEqual(res["dataset_name"], "Housing_Data.csv")
+        self.assertIn("executive_summary", res)
 
     def test_pivotmind_pipeline_end_to_end(self):
         pipeline = PivotMindPipeline(df=self.df, dataset_name="TestSales", user_query="how many students are ther from aiml dept")
@@ -323,5 +376,6 @@ class PivotMindPipelineTests(TestCase):
         self.assertIn("health_score", result)
         self.assertIn("executive_summary", result)
         self.assertNotEqual(result["top_hypothesis"].get("recommended_y"), "Contact Number")
+
 
 

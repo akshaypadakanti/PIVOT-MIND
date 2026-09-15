@@ -18,6 +18,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from .semantic_classifier import SemanticClassifier
+from .viz_validator import VisualizationSpec, validate_visualization_ast
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ UNSAFE_FUNCTIONS = {
 
 
 class ASTSandboxError(Exception):
-    """Raised when generated code contains unsafe AST nodes."""
+    """Raised when generated code contains unsafe AST nodes or fails AST semantic validation."""
     pass
 
 
@@ -98,8 +99,8 @@ CRITICAL ANALYST RULES:
 
 class Visualizer:
     """
-    Generates Plotly interactive charts with AST security verification
-    and a self-healing error recovery loop.
+    Generates Plotly interactive charts with AST security verification,
+    AST semantic visualization validation, and a self-healing error recovery loop.
     """
 
     def __init__(
@@ -117,7 +118,7 @@ class Visualizer:
 
     def generate_chart(self) -> dict[str, Any]:
         """
-        Executes code generation, AST sandbox validation, and self-healing loop.
+        Executes code generation, AST security validation, AST semantic validation, and self-healing loop.
         Returns a dictionary containing Plotly JSON figure, HTML snippet, status, and code.
         """
         if self.df.empty:
@@ -135,6 +136,14 @@ class Visualizer:
         rec_x = self.hypothesis.get("recommended_x", "")
         rec_y = self.hypothesis.get("recommended_y", "")
 
+        # Build explicit VisualizationSpec BEFORE code generation
+        spec = VisualizationSpec(
+            chart_type=viz_type,
+            x_column=rec_x,
+            y_column=rec_y if rec_y else None,
+            title=self.hypothesis.get("title", ""),
+        )
+
         # Always build guaranteed top 1% analyst fallback chart
         fallback_res = self._auto_plotly_express_fallback(viz_type, rec_x, rec_y)
 
@@ -150,11 +159,12 @@ class Visualizer:
 USER ANALYST QUESTION / HYPOTHESIS TO VISUALIZE:
 "{question}"
 
-SUGGESTED VIZ TYPE: {viz_type}
-SUGGESTED X-AXIS: {rec_x}
-SUGGESTED Y-AXIS: {rec_y}
+REQUIRED VISUALIZATION SPECIFICATION:
+Target Chart Type: {viz_type}
+Target X-Axis Column: {rec_x}
+Target Y-Axis Column: {rec_y}
 
-CRITICAL: Analyze the user's explicit question/hypothesis above. Select the exact columns, filters, and Plotly figure (`px` or `go`) that directly answer and visualize the user's specific analytical question/insight. Store the resulting Plotly Figure object in `fig`.
+CRITICAL: Generate Python code that strictly references x='{rec_x}' (and y='{rec_y}' if non-empty). Store Plotly Figure in `fig`.
 """
 
         from google import genai
@@ -180,7 +190,15 @@ CRITICAL: Analyze the user's explicit question/hypothesis above. Select the exac
                 code_text = response.text or ""
                 clean_code = self._extract_code(code_text)
 
+                # 1. AST Security Validation
                 code_ast = validate_ast(clean_code)
+
+                # 2. AST Semantic Visualization Validation
+                is_sem_valid, sem_err = validate_visualization_ast(clean_code, spec)
+                if not is_sem_valid:
+                    raise ASTSandboxError(sem_err)
+
+                # 3. Code Execution Sandbox
                 fig = self._execute_code_sandbox(code_ast)
 
                 if fig is not None:

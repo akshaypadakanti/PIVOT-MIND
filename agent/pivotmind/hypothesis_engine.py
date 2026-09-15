@@ -13,8 +13,52 @@ from django.conf import settings
 import pandas as pd
 
 from .semantic_classifier import SemanticClassifier
+from .derived_detector import DerivedColumnDetector
 
 logger = logging.getLogger(__name__)
+
+
+def validate_hypothesis(
+    hyp: dict[str, Any],
+    df: pd.DataFrame | None,
+    schema: dict[str, list[str]],
+    derived_pairs: set[tuple[str, str]],
+) -> tuple[bool, str]:
+    """
+    Validates a proposed hypothesis against dataset schema, derived column pairs, and domain logic.
+    Returns (True, "OK") if valid, or (False, rejection_reason) if invalid.
+    """
+    x = str(hyp.get("recommended_x", "") or "").strip()
+    y = str(hyp.get("recommended_y", "") or "").strip()
+    viz_type = str(hyp.get("target_visualization", "") or "").strip()
+    question = str(hyp.get("question", "") or "").strip().lower()
+
+    # 1. Trivial self-comparison check
+    if x and y and x == y:
+        return (False, f"REJECTED: Hypothesis compares variable '{x}' against itself.")
+
+    # 2. Derived pair isolation check (e.g. Age vs AgeGroup)
+    if x and y:
+        if (x, y) in derived_pairs or (y, x) in derived_pairs:
+            return (False, f"REJECTED: Hypothesis compares raw variable '{x}' against directly derived variable '{y}'.")
+        
+        # Name pattern fallback derived check
+        x_c, y_c = x.lower(), y.lower()
+        if (x_c in y_c or y_c in x_c) and any(s in x_c or s in y_c for s in ["group", "slab", "bucket", "bin", "range", "tier"]):
+            return (False, f"REJECTED: Hypothesis compares raw variable '{x}' against binned/derived variable '{y}'.")
+
+    # 3. Time series grounding check
+    datetime_cols = schema.get("DATETIME", [])
+    if (viz_type == "line_chart" or "sequential" in question or "over time" in question or "progression" in question) and not datetime_cols:
+        if x not in datetime_cols:
+            return (False, f"REJECTED: Line chart / time trend proposed without a valid DATETIME column in dataset schema.")
+
+    # 4. Identifier isolation check
+    id_cols = schema.get("IDENTIFIER", [])
+    if y and y in id_cols:
+        return (False, f"REJECTED: Identifier column '{y}' cannot be plotted on Y-axis or aggregated.")
+
+    return (True, "OK")
 
 
 HYPOTHESIS_SYSTEM_PROMPT = """You are a Top 1% Senior Data Analyst & Principal Business Intelligence Lead.
@@ -120,13 +164,26 @@ class HypothesisEngine:
             parsed = self._parse_json_response(raw_text)
             parsed["autopilot_mode"] = is_autopilot
 
-            # Validate that LLM did not hallucinate an identifier on Y axis
+            # Filter all hypotheses through validate_hypothesis gatekeeper
             if self.df is not None and not self.df.empty:
                 classifier = SemanticClassifier(self.df)
-                id_cols = classifier.get_classified_schema()["IDENTIFIER"]
-                top_y = parsed.get("top_hypothesis", {}).get("recommended_y", "")
-                if top_y in id_cols:
-                    parsed["top_hypothesis"]["recommended_y"] = ""
+                schema = classifier.get_classified_schema()
+                detector = DerivedColumnDetector(self.df)
+                derived_pairs = detector.detect_derived_pairs()
+
+                valid_hyps = []
+                for hyp in parsed.get("hypotheses", []):
+                    is_valid, reason = validate_hypothesis(hyp, self.df, schema, derived_pairs)
+                    if is_valid:
+                        valid_hyps.append(hyp)
+                    else:
+                        logger.warning("Rejected hypothesis: %s", reason)
+
+                if not valid_hyps:
+                    return domain_hypotheses
+
+                parsed["hypotheses"] = valid_hyps
+                parsed["top_hypothesis"] = valid_hyps[0]
 
             return parsed
 
