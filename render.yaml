@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: pivotmind-agentlab
+    name: pivotmind
     env: python
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     startCommand: gunicorn config.wsgi:application

@@ -1,5 +1,5 @@
 """
-Django settings for AgentLab.
+Django settings for PivotMind.
 
 Secrets are loaded from environment variables / a local .env file.
 Never hardcode API keys in this file.
@@ -28,6 +28,8 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://*.vercel.app",
+    "https://*.now.sh",
     "https://*.render.com",
     "https://*.onrender.com",
     "https://*.railway.app",
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
 ]
+
 try:
     import whitenoise  # noqa: F401
     MIDDLEWARE.append("whitenoise.middleware.WhiteNoiseMiddleware")
@@ -84,10 +87,23 @@ TEMPLATES = [
     },
 ]
 
+# Database configuration: support Vercel serverless writable /tmp filesystem fallback
+if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
+    tmp_db = Path("/tmp/db.sqlite3")
+    if not tmp_db.exists() and (BASE_DIR / "db.sqlite3").exists():
+        import shutil
+        try:
+            shutil.copyfile(BASE_DIR / "db.sqlite3", tmp_db)
+        except Exception:
+            pass
+    db_name = tmp_db if tmp_db.parent.exists() else BASE_DIR / "db.sqlite3"
+else:
+    db_name = BASE_DIR / "db.sqlite3"
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": db_name,
     }
 }
 
@@ -117,7 +133,7 @@ MESSAGE_TAGS = {
     message_constants.ERROR: "error",
 }
 
-# --- AgentLab configuration ---
+# --- PivotMind configuration ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash").strip() or "gemini-3.6-flash"
 SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "").strip()

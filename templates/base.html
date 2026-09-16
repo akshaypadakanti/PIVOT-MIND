@@ -44,18 +44,6 @@
                     <span class="icon">📊</span>
                     <span class="link-text">New Analysis</span>
                 </a>
-                <a href="{% url 'activity' %}" class="sidebar-link {% if request.resolver_match.url_name == 'activity' %}active{% endif %}" title="Activity">
-                    <span class="icon">⏱️</span>
-                    <span class="link-text">Activity</span>
-                </a>
-                <a href="{% url 'history' %}" class="sidebar-link {% if request.resolver_match.url_name == 'history' %}active{% endif %}" title="History">
-                    <span class="icon">📋</span>
-                    <span class="link-text">History</span>
-                </a>
-                <a href="{% url 'settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}" title="Settings">
-                    <span class="icon">⚙️</span>
-                    <span class="link-text">Settings</span>
-                </a>
             </nav>
             <div class="sidebar-footer">
                 <span class="sidebar-badge">5-AGENT AI</span>
@@ -130,6 +118,6 @@
             if (e.key === "Escape") hideWorkingOverlay();
         });
     </script>
-    <script src="{% static 'js/agentlab.js' %}?v=flat2d_v10"></script>
+    <script src="{% static 'js/pivotmind.js' %}?v=flat2d_v10"></script>
 </body>
 </html>
