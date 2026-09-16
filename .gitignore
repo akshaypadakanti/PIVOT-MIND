@@ -40,3 +40,4 @@ htmlcov/
 
 # Local scratch
 agentlab_tmp/
+.vercel
