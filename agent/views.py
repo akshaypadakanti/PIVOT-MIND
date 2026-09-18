@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 import pandas as pd
 
+from agent.db_utils import ensure_db_migrated
 from agent.forms import PivotMindUploadForm
 from agent.models import PivotMindAnalysis
 from agent.pivotmind.chat_assistant import PivotMindChatAssistant
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def pivotmind_dashboard(request):
+    ensure_db_migrated()
     try:
         analyses = list(PivotMindAnalysis.objects.all())
         total_count = len(analyses)
@@ -45,7 +47,9 @@ def pivotmind_dashboard(request):
 
 @require_http_methods(["GET", "POST"])
 def pivotmind_upload(request):
+    ensure_db_migrated()
     if request.method == "POST":
+
         form = PivotMindUploadForm(request.POST, request.FILES)
         if form.is_valid():
             user_query = form.cleaned_data.get("user_query", "").strip()
