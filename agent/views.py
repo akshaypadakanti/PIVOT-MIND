@@ -59,13 +59,44 @@ def pivotmind_upload(request):
             try:
                 if file_obj:
                     filename = file_obj.name
-                    if filename.endswith(".csv"):
-                        df = pd.read_csv(file_obj)
-                    elif filename.endswith((".xlsx", ".xls")):
-                        df = pd.read_excel(file_obj)
+                    fname_lower = filename.lower()
+                    df = None
+
+                    if fname_lower.endswith(".csv"):
+                        # Multi-encoding & auto-separator fallback for custom CSV files
+                        encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
+                        for enc in encodings:
+                            try:
+                                file_obj.seek(0)
+                                df = pd.read_csv(file_obj, encoding=enc)
+                                if df is not None and not df.empty and len(df.columns) > 0:
+                                    break
+                            except Exception:
+                                pass
+
+                        if df is None or df.empty or len(df.columns) <= 1:
+                            try:
+                                file_obj.seek(0)
+                                df = pd.read_csv(file_obj, encoding="latin1", sep=None, engine="python")
+                            except Exception:
+                                pass
+
+                    elif fname_lower.endswith((".xlsx", ".xls")):
+                        file_obj.seek(0)
+                        try:
+                            df = pd.read_excel(file_obj)
+                        except Exception:
+                            file_obj.seek(0)
+                            df = pd.read_excel(file_obj, engine="openpyxl")
+
                     else:
-                        messages.error(request, "Unsupported file format. Please upload a CSV or Excel file.")
+                        messages.error(request, "Unsupported file format. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.")
                         return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+
+                    if df is None or df.empty:
+                        messages.error(request, "The uploaded dataset appears to be empty or unparseable. Please check the file.")
+                        return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+
                 elif demo_name:
                     filename = demo_name
                     demo_path = os.path.join(settings.BASE_DIR, "agent", "pivotmind", "demo_data", demo_name)
@@ -73,6 +104,7 @@ def pivotmind_upload(request):
                 else:
                     messages.error(request, "Please provide a valid dataset.")
                     return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+
 
                 # Execute 5-agent PivotMind pipeline
                 pipeline = PivotMindPipeline(df=df, dataset_name=filename, user_query=user_query)
