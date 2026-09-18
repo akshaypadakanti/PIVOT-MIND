@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
@@ -60,6 +61,8 @@ def pivotmind_upload(request):
                 if file_obj:
                     filename = file_obj.name
                     fname_lower = filename.lower()
+                    file_bytes = file_obj.read()
+                    file_obj.seek(0)
                     df = None
 
                     if fname_lower.endswith(".csv"):
@@ -67,8 +70,7 @@ def pivotmind_upload(request):
                         encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
                         for enc in encodings:
                             try:
-                                file_obj.seek(0)
-                                df = pd.read_csv(file_obj, encoding=enc)
+                                df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
                                 if df is not None and not df.empty and len(df.columns) > 0:
                                     break
                             except Exception:
@@ -76,18 +78,41 @@ def pivotmind_upload(request):
 
                         if df is None or df.empty or len(df.columns) <= 1:
                             try:
-                                file_obj.seek(0)
-                                df = pd.read_csv(file_obj, encoding="latin1", sep=None, engine="python")
+                                df = pd.read_csv(io.BytesIO(file_bytes), encoding="latin1", sep=None, engine="python")
                             except Exception:
                                 pass
 
+                        # Fallback: try skipping leading header/title rows if initial parse is empty or single column
+                        if df is None or df.empty or (len(df.columns) == 1 and len(df) <= 1):
+                            for skiprows in range(1, 6):
+                                try:
+                                    trial_df = pd.read_csv(io.BytesIO(file_bytes), encoding="latin1", skiprows=skiprows)
+                                    if trial_df is not None and not trial_df.empty and len(trial_df.columns) > 1:
+                                        df = trial_df
+                                        break
+                                except Exception:
+                                    pass
+
                     elif fname_lower.endswith((".xlsx", ".xls")):
-                        file_obj.seek(0)
+                        # Scan all sheets in Excel workbook and select the sheet with the largest data table
                         try:
-                            df = pd.read_excel(file_obj)
-                        except Exception:
-                            file_obj.seek(0)
-                            df = pd.read_excel(file_obj, engine="openpyxl")
+                            sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+                            best_df = pd.DataFrame()
+                            max_cells = -1
+                            for sheet_name, sheet_df in sheets_dict.items():
+                                if sheet_df is not None and not sheet_df.empty:
+                                    cleaned = sheet_df.dropna(how="all").dropna(how="all", axis=1)
+                                    cells = cleaned.shape[0] * cleaned.shape[1]
+                                    if cells > max_cells:
+                                        max_cells = cells
+                                        best_df = cleaned
+                            df = best_df if not best_df.empty else None
+                        except Exception as excel_err:
+                            logger.warning("Failed multi-sheet BytesIO read: %s", excel_err)
+                            try:
+                                df = pd.read_excel(io.BytesIO(file_bytes), engine="openpyxl")
+                            except Exception:
+                                pass
 
                     else:
                         messages.error(request, "Unsupported file format. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.")
@@ -96,6 +121,7 @@ def pivotmind_upload(request):
                     if df is None or df.empty:
                         messages.error(request, "The uploaded dataset appears to be empty or unparseable. Please check the file.")
                         return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+
 
                 elif demo_name:
                     filename = demo_name
