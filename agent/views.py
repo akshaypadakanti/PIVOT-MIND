@@ -46,6 +46,87 @@ def pivotmind_dashboard(request):
     )
 
 
+def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
+    """
+    Robustly parses uploaded dataset bytes supporting:
+    - Multi-sheet Excel files (automatically picks the primary data sheet)
+    - Semicolon (;), Tab (\\t), Pipe (|), and Comma (,) separated CSVs
+    - Multi-encoding fallback (utf-8, utf-8-sig, latin1, cp1252, iso-8859-1)
+    - Auto-skipping leading title/metadata rows
+    """
+    fname_lower = filename.lower()
+    encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
+
+    if fname_lower.endswith((".xlsx", ".xls")):
+        try:
+            sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+            best_df = pd.DataFrame()
+            max_cells = -1
+            for sheet_name, sheet_df in sheets_dict.items():
+                if sheet_df is not None and not sheet_df.empty:
+                    cleaned = sheet_df.dropna(how="all").dropna(how="all", axis=1)
+                    cells = cleaned.shape[0] * cleaned.shape[1]
+                    if cells > max_cells:
+                        max_cells = cells
+                        best_df = cleaned
+            if not best_df.empty:
+                return best_df
+        except Exception as exc:
+            logger.warning("Multi-sheet excel parse fallback: %s", exc)
+
+        try:
+            return pd.read_excel(io.BytesIO(file_bytes))
+        except Exception:
+            pass
+
+    # For CSV / TSV / Semicolon / Pipe separated files
+    separators = [";", "\t", "|", ",", None]
+    for sep in separators:
+        for enc in encodings:
+            try:
+                kwargs = {"encoding": enc}
+                if sep is None:
+                    kwargs["sep"] = None
+                    kwargs["engine"] = "python"
+                else:
+                    kwargs["sep"] = sep
+
+                df = pd.read_csv(io.BytesIO(file_bytes), **kwargs)
+                if df is not None and not df.empty and len(df.columns) > 1:
+                    return df
+            except Exception:
+                pass
+
+    # Retry skipping leading metadata lines if initial parse failed
+    for skiprows in range(1, 6):
+        for sep in separators:
+            for enc in encodings:
+                try:
+                    kwargs = {"encoding": enc, "skiprows": skiprows}
+                    if sep is None:
+                        kwargs["sep"] = None
+                        kwargs["engine"] = "python"
+                    else:
+                        kwargs["sep"] = sep
+
+                    df = pd.read_csv(io.BytesIO(file_bytes), **kwargs)
+                    if df is not None and not df.empty and len(df.columns) > 1:
+                        return df
+                except Exception:
+                    pass
+
+    # Last resort fallback: return any single-column or unparsed dataframe if non-empty
+    for enc in encodings:
+        try:
+            df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
+            if df is not None and not df.empty:
+                return df
+        except Exception:
+            pass
+
+    return pd.DataFrame()
+
+
 @require_http_methods(["GET", "POST"])
 def pivotmind_upload(request):
     ensure_db_migrated()
@@ -60,68 +141,14 @@ def pivotmind_upload(request):
             try:
                 if file_obj:
                     filename = file_obj.name
-                    fname_lower = filename.lower()
                     file_bytes = file_obj.read()
                     file_obj.seek(0)
-                    df = None
 
-                    if fname_lower.endswith(".csv"):
-                        # Multi-encoding & auto-separator fallback for custom CSV files
-                        encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
-                        for enc in encodings:
-                            try:
-                                df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
-                                if df is not None and not df.empty and len(df.columns) > 0:
-                                    break
-                            except Exception:
-                                pass
-
-                        if df is None or df.empty or len(df.columns) <= 1:
-                            try:
-                                df = pd.read_csv(io.BytesIO(file_bytes), encoding="latin1", sep=None, engine="python")
-                            except Exception:
-                                pass
-
-                        # Fallback: try skipping leading header/title rows if initial parse is empty or single column
-                        if df is None or df.empty or (len(df.columns) == 1 and len(df) <= 1):
-                            for skiprows in range(1, 6):
-                                try:
-                                    trial_df = pd.read_csv(io.BytesIO(file_bytes), encoding="latin1", skiprows=skiprows)
-                                    if trial_df is not None and not trial_df.empty and len(trial_df.columns) > 1:
-                                        df = trial_df
-                                        break
-                                except Exception:
-                                    pass
-
-                    elif fname_lower.endswith((".xlsx", ".xls")):
-                        # Scan all sheets in Excel workbook and select the sheet with the largest data table
-                        try:
-                            sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
-                            best_df = pd.DataFrame()
-                            max_cells = -1
-                            for sheet_name, sheet_df in sheets_dict.items():
-                                if sheet_df is not None and not sheet_df.empty:
-                                    cleaned = sheet_df.dropna(how="all").dropna(how="all", axis=1)
-                                    cells = cleaned.shape[0] * cleaned.shape[1]
-                                    if cells > max_cells:
-                                        max_cells = cells
-                                        best_df = cleaned
-                            df = best_df if not best_df.empty else None
-                        except Exception as excel_err:
-                            logger.warning("Failed multi-sheet BytesIO read: %s", excel_err)
-                            try:
-                                df = pd.read_excel(io.BytesIO(file_bytes), engine="openpyxl")
-                            except Exception:
-                                pass
-
-                    else:
-                        messages.error(request, "Unsupported file format. Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.")
-                        return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+                    df = parse_uploaded_dataset(file_bytes, filename)
 
                     if df is None or df.empty:
                         messages.error(request, "The uploaded dataset appears to be empty or unparseable. Please check the file.")
                         return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
-
 
                 elif demo_name:
                     filename = demo_name
@@ -130,6 +157,7 @@ def pivotmind_upload(request):
                 else:
                     messages.error(request, "Please provide a valid dataset.")
                     return render(request, "pivotmind/upload.html", {"form": form, "page_title": "PivotMind Upload"})
+
 
 
                 # Execute 5-agent PivotMind pipeline
