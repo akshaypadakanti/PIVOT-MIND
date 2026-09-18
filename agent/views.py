@@ -49,15 +49,24 @@ def pivotmind_dashboard(request):
 def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
     """
     Robustly parses uploaded dataset bytes supporting:
+    - Magic byte detection (detects Excel .xlsx / .xls files even if renamed to .csv)
     - Multi-sheet Excel files (automatically picks the primary data sheet)
-    - Semicolon (;), Tab (\\t), Pipe (|), and Comma (,) separated CSVs
+    - Semicolon (;), Tab (\t), Pipe (|), and Comma (,) separated CSVs
     - Multi-encoding fallback (utf-8, utf-8-sig, latin1, cp1252, iso-8859-1)
-    - Auto-skipping leading title/metadata rows
+    - Binary garbage protection (prevents binary zip archives from reading as latin1 text)
     """
-    fname_lower = filename.lower()
-    encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
+    if not file_bytes:
+        return pd.DataFrame()
 
-    if fname_lower.endswith((".xlsx", ".xls")):
+    fname_lower = filename.lower()
+    is_excel = (
+        fname_lower.endswith((".xlsx", ".xls", ".xlsm"))
+        or file_bytes.startswith(b"PK\x03\x04")
+        or file_bytes.startswith(b"\xd0\xcf\x11\xe0")
+    )
+
+    # 1. Try Excel parsing if magic bytes indicate ZIP/Excel or extension is .xlsx/.xls
+    if is_excel:
         try:
             sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
             best_df = pd.DataFrame()
@@ -75,14 +84,37 @@ def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
             logger.warning("Multi-sheet excel parse fallback: %s", exc)
 
         try:
-            return pd.read_excel(io.BytesIO(file_bytes))
+            df = pd.read_excel(io.BytesIO(file_bytes))
+            if df is not None and not df.empty:
+                return df
         except Exception:
             pass
 
-    # For CSV / TSV / Semicolon / Pipe separated files
+    # 2. Guard against parsing raw binary files as CSV
+    if b"\x00" in file_bytes[:4096]:
+        logger.warning("File '%s' contains null bytes and is not a valid Excel file. Rejecting raw binary stream.", filename)
+        return pd.DataFrame()
+
+    # Helper validator to ensure parsed columns/values are clean text, not binary zip junk
+    def is_clean_text_df(candidate_df: pd.DataFrame) -> bool:
+        if candidate_df is None or candidate_df.empty or len(candidate_df.columns) == 0:
+            return False
+        col_str = " ".join(str(c) for c in candidate_df.columns)
+        if "PK\x03\x04" in col_str or "PK\x01\x02" in col_str or "drawing1.xml" in col_str or "worksheets/sheet" in col_str:
+            return False
+        first_row_str = " ".join(str(val) for val in candidate_df.iloc[0].values) if len(candidate_df) > 0 else ""
+        if "worksheets/sheet" in first_row_str or "drawing1.xml" in first_row_str:
+            return False
+        return True
+
+    # 3. For true text CSV / TSV / Semicolon / Pipe files
+    encodings = ["utf-8", "utf-8-sig", "latin1", "cp1252", "iso-8859-1"]
     separators = [";", "\t", "|", ",", None]
+
     for sep in separators:
         for enc in encodings:
+            if enc == "latin1" and (b"\x00" in file_bytes or file_bytes.startswith(b"PK")):
+                continue
             try:
                 kwargs = {"encoding": enc}
                 if sep is None:
@@ -92,7 +124,7 @@ def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
                     kwargs["sep"] = sep
 
                 df = pd.read_csv(io.BytesIO(file_bytes), **kwargs)
-                if df is not None and not df.empty and len(df.columns) > 1:
+                if is_clean_text_df(df) and len(df.columns) > 1:
                     return df
             except Exception:
                 pass
@@ -101,6 +133,8 @@ def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
     for skiprows in range(1, 6):
         for sep in separators:
             for enc in encodings:
+                if enc == "latin1" and (b"\x00" in file_bytes or file_bytes.startswith(b"PK")):
+                    continue
                 try:
                     kwargs = {"encoding": enc, "skiprows": skiprows}
                     if sep is None:
@@ -110,21 +144,24 @@ def parse_uploaded_dataset(file_bytes: bytes, filename: str) -> pd.DataFrame:
                         kwargs["sep"] = sep
 
                     df = pd.read_csv(io.BytesIO(file_bytes), **kwargs)
-                    if df is not None and not df.empty and len(df.columns) > 1:
+                    if is_clean_text_df(df) and len(df.columns) > 1:
                         return df
                 except Exception:
                     pass
 
-    # Last resort fallback: return any single-column or unparsed dataframe if non-empty
-    for enc in encodings:
+    # Last resort fallback: single column text dataset
+    for enc in ["utf-8", "utf-8-sig", "latin1"]:
+        if enc == "latin1" and (b"\x00" in file_bytes or file_bytes.startswith(b"PK")):
+            continue
         try:
             df = pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
-            if df is not None and not df.empty:
+            if is_clean_text_df(df):
                 return df
         except Exception:
             pass
 
     return pd.DataFrame()
+
 
 
 @require_http_methods(["GET", "POST"])
